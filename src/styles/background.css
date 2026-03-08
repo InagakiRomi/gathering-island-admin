@@ -1,0 +1,23 @@
+/**
+ * 背景圖片樣式（共用）
+ * 用於全版／區塊背景圖的 RWD 設定（尺寸、定位、斷點）。
+ * 登入頁等需背景圖的頁面可掛上對應 class 使用。
+ */
+.login-bg {
+  background-image: url('/image/login-bg.jpg');
+}
+
+/* 手機：保留小島視覺焦點 */
+@media (max-width: 639px) {
+  .login-bg {
+    background-position: center 25%;
+    background-size: cover;
+  }
+}
+
+/* 平板以上 */
+@media (min-width: 640px) {
+  .login-bg {
+    background-size: cover;
+  }
+}

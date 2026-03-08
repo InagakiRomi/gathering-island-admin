@@ -3,6 +3,7 @@
 @plugin 'tailwindcss-animate';
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
+@import "./styles/background.css";
 
 @custom-variant dark (&:is(.dark *));
 
