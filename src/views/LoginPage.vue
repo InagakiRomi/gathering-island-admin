@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
-import { toErrorMessage, LOGIN_FAILED_MESSAGE } from '@/api/auth/authErrorMessages'
+import { toLoginErrorMessage, LOGIN_FAILED_MESSAGE } from '@/api/auth/authErrorMessages'
 import { useAuthLoginMutation } from '@/api/auth/auth.api'
 
 /** 使用者輸入的電子郵件 */
@@ -69,7 +69,7 @@ function handleLogin() {
 
         // 取得後端回傳的錯誤代碼並轉換為中文訊息
         const payload = error.data as ErrorPayload | undefined
-        errorMessage.value = toErrorMessage(payload?.code)
+        errorMessage.value = toLoginErrorMessage(payload?.code)
       },
     },
   )
@@ -77,16 +77,16 @@ function handleLogin() {
 </script>
 
 <template>
-  <!-- 登入頁主容器：全螢幕置中、背景與遮罩 -->
-  <main class="relative flex min-h-dvh items-center p-6">
+  <!-- 登入頁主容器 -->
+  <main class="relative flex min-h-dvh items-center justify-center overflow-y-auto p-6 py-8">
     <!-- 背景圖 -->
     <div class="login-bg absolute inset-0 bg-no-repeat md:bg-position-[center_30%]" />
 
     <!-- 暗色遮罩 -->
     <div class="absolute inset-0 bg-[oklch(0.2_0.02_240/0.38)]" />
 
-    <!-- 內容區：Logo + 登入卡片 -->
-    <div class="flex w-full flex-col items-center -translate-y-10">
+    <!-- 內容區：Logo + 登入卡片，保留上下間距 -->
+    <div class="relative z-10 flex w-full min-h-0 flex-col items-center py-4">
       <!-- Logo -->
       <div class="flex pb-4 sm:pb-6">
         <img src="/logo_title.svg" alt="聚會島logo" class="h-28 sm:h-32" />
@@ -131,7 +131,11 @@ function handleLogin() {
               {{ isSubmitting ? '登入中...' : '登入' }}
             </AuthPageButton>
             <!-- 登入失敗時顯示的錯誤區塊 -->
-            <Alert v-if="errorMessage" variant="destructive" class="text-center">
+            <Alert
+              v-if="errorMessage"
+              variant="destructive"
+              class="text-center bg-destructive/5 border-destructive/20"
+            >
               <AlertDescription>{{ errorMessage }}</AlertDescription>
             </Alert>
           </form>
