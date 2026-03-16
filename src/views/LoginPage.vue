@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AuthPageButton from '@/components/auth/AuthPageButton.vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +26,9 @@ const errorMessage = ref('')
 
 /** 登入 mutation */
 const authLoginMutation = useAuthLoginMutation()
+
+/** 路由實例（登入成功導頁用） */
+const router = useRouter()
 
 /** 是否正在送出登入請求 */
 const isSubmitting = computed(() => authLoginMutation.isPending.value)
@@ -59,7 +63,7 @@ function handleLogin() {
     {
       onSuccess(result) {
         localStorage.setItem('accessToken', result.accessToken)
-        console.log('login success payload', result.payload)
+        void router.push('/admin/gatherings')
       },
       onError(error: unknown) {
         if (!(error instanceof ApiClientError)) {
