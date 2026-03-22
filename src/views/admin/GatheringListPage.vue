@@ -1,17 +1,10 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
+import { computed, ref, watch, watchEffect, defineComponent, h } from 'vue'
+import type { PropType } from 'vue'
 import type { BadgeVariants } from '@/components/ui/badge'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableEmpty,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableCell } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useGatheringsQuery } from '@/api/gatherings/gatherings.api'
 import type { GatheringStatus, GatheringType } from '@/api/gatherings/gatherings.types'
@@ -23,7 +16,9 @@ import {
   GATHERING_TYPE_TEXT_MAP,
 } from '@/api/gatherings/gatheringsList.text'
 import TableFilterControls from '@/components/table/TableFilterControls.vue'
+import AlertDialog from '@/components/common/AlertDialog.vue'
 import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
+import TableDataGrid from '@/components/table/TableDataGrid.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
 import { useTableControls } from '@/composables/useTableControls'
 
@@ -52,51 +47,121 @@ const gatheringsQuery = useGatheringsQuery(queryParams)
 watchEffect(() => {
   tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
 })
+const isErrorDialogOpen = ref(false)
+watch(
+  () => gatheringsQuery.isError.value,
+  (isError, wasError) => {
+    if (isError && !wasError) {
+      isErrorDialogOpen.value = true
+    }
+  },
+)
 
 /** 目前頁面要顯示的活動資料 */
-const gatheringList = computed(() => gatheringsQuery.data.value?.gatheringData ?? [])
+const gatheringRows = computed<Record<string, unknown>[]>(() =>
+  (gatheringsQuery.data.value?.gatheringData ?? []) as unknown as Record<string, unknown>[],
+)
 /** 頁面文案 */
 const text = GATHERING_LIST_TEXT
-/** 狀態篩選選項 */
-const statusOptions = GATHERING_STATUS_OPTIONS
-/** 類型篩選選項 */
-const typeOptions = GATHERING_TYPE_OPTIONS
 /** 共用表格篩選欄位設定 */
 const filterControls = computed<TableFilterControl[]>(() => [
   {
     key: 'status',
     label: text.labels.status,
     value: tableControls.filters.status,
-    options: statusOptions,
+    options: GATHERING_STATUS_OPTIONS,
   },
   {
     key: 'type',
     label: text.labels.type,
     value: tableControls.filters.type,
-    options: typeOptions,
+    options: GATHERING_TYPE_OPTIONS,
   },
 ])
+/** 列表表頭欄位 */
+const tableColumns = [
+  { key: 'id', label: text.table.id },
+  { key: 'title', label: text.table.title },
+  { key: 'type', label: text.table.type },
+  { key: 'status', label: text.table.status },
+  { key: 'location', label: text.table.location },
+  { key: 'startTime', label: text.table.startTime },
+  { key: 'deadline', label: text.table.deadline },
+  { key: 'participantNumbers', label: text.table.participantNumbers },
+  { key: 'price', label: text.table.price },
+]
 
 function onFilterUpdate(payload: { key: string; value: string }) {
   tableControls.updateFilterValue(payload.key as 'status' | 'type', payload.value)
 }
 
 /** 將活動狀態代碼轉為中文文字 */
-function toStatusText(status: GatheringStatus) {
-  return GATHERING_STATUS_TEXT_MAP[status]
+function isMapKey<T extends string>(value: unknown, map: Record<T, string>): value is T {
+  return typeof value === 'string' && value in map
+}
+
+function toMappedText<T extends string>(value: unknown, map: Record<T, string>) {
+  return isMapKey(value, map) ? map[value] : '-'
+}
+
+function isGatheringStatus(value: unknown): value is GatheringStatus {
+  return isMapKey(value, GATHERING_STATUS_TEXT_MAP)
+}
+
+/** 將活動狀態代碼轉為中文文字 */
+function toStatusText(status: unknown) {
+  return toMappedText(status, GATHERING_STATUS_TEXT_MAP)
 }
 
 /** 將活動類型代碼轉為中文文字 */
-function toTypeText(type: GatheringType) {
-  return GATHERING_TYPE_TEXT_MAP[type]
+function toTypeText(type: unknown) {
+  return toMappedText(type, GATHERING_TYPE_TEXT_MAP)
 }
 
 /** 根據活動狀態回傳對應 badge 樣式 */
-function toStatusBadgeVariant(status: GatheringStatus): BadgeVariants['variant'] {
+function toStatusBadgeVariant(status: unknown): BadgeVariants['variant'] {
+  if (!isGatheringStatus(status)) return 'secondary'
   if (status === 'OPEN') return 'default'
   if (status === 'UPCOMING') return 'secondary'
   return 'destructive'
 }
+
+function onRetryLoadGatherings() {
+  isErrorDialogOpen.value = false
+  gatheringsQuery.refetch()
+}
+
+function onErrorDialogOpenChange(value: boolean) {
+  isErrorDialogOpen.value = value
+}
+
+const TruncateTooltipCell = defineComponent({
+  name: 'TruncateTooltipCell',
+  props: {
+    value: {
+      type: null as unknown as PropType<unknown>,
+      default: '',
+    },
+  },
+  setup(props) {
+    return () =>
+      h(TableCell, { class: 'max-w-[220px] text-left!' }, () =>
+        h(Tooltip, null, {
+          default: () => [
+            h(
+              TooltipTrigger,
+              { asChild: true },
+              () =>
+                h('div', { class: 'flex w-full justify-start' }, [
+                  h('span', { class: 'inline-block max-w-full truncate text-left' }, String(props.value || '-')),
+                ]),
+            ),
+            h(TooltipContent, null, () => String(props.value || '-')),
+          ],
+        }),
+      )
+  },
+})
 </script>
 
 <template>
@@ -108,103 +173,65 @@ function toStatusBadgeVariant(status: GatheringStatus): BadgeVariants['variant']
             <CardTitle>{{ text.title }}</CardTitle>
             <p>{{ text.subtitle }}</p>
           </div>
-
-          <TableFilterControls
-            :search-value="tableControls.searchInput.value"
-            :search-label="text.labels.search"
-            :search-placeholder="text.placeholders.search"
-            :search-button-text="text.actions.search"
-            :filters="filterControls"
-            @update:search-value="tableControls.updateSearchInput"
-            @update:filter="onFilterUpdate"
-            @search="tableControls.onSearch"
-          />
         </CardHeader>
 
         <CardContent>
-          <TooltipProvider>
-            <div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{{ text.table.id }}</TableHead>
-                    <TableHead>{{ text.table.title }}</TableHead>
-                    <TableHead>{{ text.table.type }}</TableHead>
-                    <TableHead>{{ text.table.status }}</TableHead>
-                    <TableHead>{{ text.table.location }}</TableHead>
-                    <TableHead>{{ text.table.startTime }}</TableHead>
-                    <TableHead>{{ text.table.deadline }}</TableHead>
-                    <TableHead>{{ text.table.participantNumbers }}</TableHead>
-                    <TableHead>{{ text.table.price }}</TableHead>
-                  </TableRow>
-                </TableHeader>
+          <div class="overflow-hidden rounded-xl border border-cyan-200 shadow-sm">
+            <TableFilterControls
+              :search-value="tableControls.searchInput.value"
+              :search-label="text.labels.search"
+              :search-placeholder="text.placeholders.search"
+              :search-button-text="text.actions.search"
+              :filters="filterControls"
+              @update:search-value="tableControls.updateSearchInput"
+              @update:filter="onFilterUpdate"
+              @search="tableControls.onSearch"
+            />
 
-                <TableBody>
-                  <TableRow v-if="gatheringsQuery.isPending.value">
-                    <TableCell colspan="9">
-                      {{ text.states.loading }}
-                    </TableCell>
-                  </TableRow>
-
-                  <TableEmpty v-else-if="!gatheringList.length" :colspan="9">
-                    {{ text.states.empty }}
-                  </TableEmpty>
-
-                  <TableRow v-for="gathering in gatheringList" :key="gathering.id">
-                    <TableCell>{{ gathering.id }}</TableCell>
-                    <TableCell class="max-w-[220px]">
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <span class="block truncate">
-                            {{ gathering.title }}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{ gathering.title }}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{{ toTypeText(gathering.type) }}</TableCell>
-                    <TableCell>
+            <TooltipProvider>
+              <TableDataGrid
+                :columns="tableColumns"
+                :rows="gatheringRows"
+                :is-loading="gatheringsQuery.isPending.value"
+                :loading-text="text.states.loading"
+                :empty-text="text.states.empty"
+              >
+                <template #row="{ row: gathering }">
+                    <TableCell class="text-center">{{ gathering.id }}</TableCell>
+                    <TruncateTooltipCell :value="String(gathering.title ?? '-')" />
+                    <TableCell class="text-center">{{ toTypeText(gathering.type) }}</TableCell>
+                    <TableCell class="text-center">
                       <Badge :variant="toStatusBadgeVariant(gathering.status)">
                         {{ toStatusText(gathering.status) }}
                       </Badge>
                     </TableCell>
-                    <TableCell class="max-w-[220px]">
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <span class="block truncate">
-                            {{ gathering.location }}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{ gathering.location }}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{{ gathering.startTime }}</TableCell>
-                    <TableCell>{{ gathering.deadline }}</TableCell>
-                    <TableCell>{{ gathering.participantNumbers }}</TableCell>
-                    <TableCell>${{ gathering.price }}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          </TooltipProvider>
+                    <TruncateTooltipCell :value="String(gathering.location ?? '-')" />
+                    <TableCell class="text-center">{{ gathering.startTime }}</TableCell>
+                    <TableCell class="text-center">{{ gathering.deadline }}</TableCell>
+                    <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
+                    <TableCell class="text-center">${{ gathering.price }}</TableCell>
+                </template>
+              </TableDataGrid>
+            </TooltipProvider>
 
-          <TablePaginationBar
-            :total="tableControls.total.value"
-            :page="tableControls.page.value"
-            :total-pages="tableControls.totalPages.value"
-            :text="text.pagination"
-            :prev-button-text="text.actions.prevPage"
-            :next-button-text="text.actions.nextPage"
-            @go-page="tableControls.setPage"
+            <TablePaginationBar
+              :total="tableControls.total.value"
+              :page="tableControls.page.value"
+              :total-pages="tableControls.totalPages.value"
+              :text="text.pagination"
+              :prev-button-text="text.actions.prevPage"
+              :next-button-text="text.actions.nextPage"
+              @go-page="tableControls.setPage"
+            />
+          </div>
+
+          <AlertDialog
+            :open="isErrorDialogOpen"
+            variant="error"
+            show-retry
+            @update:open="onErrorDialogOpenChange"
+            @retry="onRetryLoadGatherings"
           />
-
-          <p v-if="gatheringsQuery.isError.value">
-            {{ text.states.error }}
-          </p>
         </CardContent>
       </Card>
     </section>

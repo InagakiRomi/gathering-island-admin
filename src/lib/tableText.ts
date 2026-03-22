@@ -9,8 +9,6 @@ export const TABLE_COMMON_TEXT = {
   },
   pagination: {
     totalPrefix: '共',
-    totalSuffix: '筆，第',
-    pageSeparator: '/',
-    pageSuffix: '頁',
+    totalSuffix: '筆',
   },
 } as const

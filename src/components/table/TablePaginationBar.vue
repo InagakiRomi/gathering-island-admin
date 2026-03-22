@@ -8,17 +8,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-import { Separator } from '@/components/ui/separator'
 
-// 定義分頁摘要文案結構，支援多語系或不同文案格式。
+/** 分頁摘要文字格式 */
 interface TablePaginationText {
   totalPrefix: string
   totalSuffix: string
-  pageSeparator: string
-  pageSuffix: string
 }
 
-// 定義元件外部輸入資料：總筆數、目前頁、總頁數與按鈕文案。
+/** 元件接收的外部資料 */
 const props = defineProps<{
   total: number
   page: number
@@ -28,56 +25,68 @@ const props = defineProps<{
   nextButtonText: string
 }>()
 
-// 計算分頁摘要字串，例如：「共 120 筆，第 2 / 12 頁」。
+/** 組合分頁摘要顯示文字 */
 const paginationSummary = computed(
-  () =>
-    `${props.text.totalPrefix} ${props.total} ${props.text.totalSuffix} ${props.page} ` +
-    `${props.text.pageSeparator} ${props.totalPages} ${props.text.pageSuffix}`,
+  () => `${props.text.totalPrefix} ${props.total} ${props.text.totalSuffix}`,
 )
 
-// 定義對外事件：通知父層切換到指定頁碼。
-const emit = defineEmits<{
+/** 元件對外發送的事件 */
+type TablePaginationBarEmits = {
   (event: 'go-page', page: number): void
-}>()
+}
+
+/** 事件發送器 */
+const emit = defineEmits<TablePaginationBarEmits>()
 </script>
 
 <template>
-  <!-- 分頁列外層容器：手機直向堆疊、桌機橫向排列。 -->
-  <div class="mt-4 flex flex-col gap-3 text-sm md:flex-row md:items-center">
-    <!-- 顯示分頁摘要資訊（總筆數、目前頁、總頁數）。 -->
-    <p class="text-muted-foreground md:flex-1">
+  <!-- 分頁列整體區塊 -->
+  <div
+    class="relative flex flex-col items-center gap-3 border-t border-teal-100 bg-white/90 p-3 text-sm md:block md:min-h-14 md:p-4"
+  >
+    <!-- 顯示分頁摘要 -->
+    <p class="text-slate-600 md:pr-4 md:text-left">
       {{ paginationSummary }}
     </p>
 
-    <!-- 桌機版分隔線：區隔左側摘要與右側分頁控制。 -->
-    <Separator orientation="vertical" class="hidden h-5 md:block" />
-
-    <!-- 分頁主元件：接收目前頁與總頁數，並顯示首尾頁。 -->
-    <!-- 將元件回傳頁碼轉成 number 後，再往父層拋出切頁事件。 -->
+    <!-- 分頁控制區 -->
     <Pagination
       :page="page"
       :total="totalPages"
       :items-per-page="1"
       :sibling-count="1"
       show-edges
-      class="w-auto md:ml-auto md:mr-0"
-      @update:page="value => emit('go-page', Number(value))"
+      class="w-auto md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2"
+      @update:page="(value) => emit('go-page', Number(value))"
     >
-      <!-- 分頁內容容器：透過 slot 取得要渲染的頁碼項目清單。 -->
-      <PaginationContent v-slot="{ items }">
-        <!-- 上一頁按鈕：使用外部傳入文案。 -->
-        <PaginationPrevious>{{ prevButtonText }}</PaginationPrevious>
-        <!-- 依序渲染頁碼項目：可能是頁碼或省略號。 -->
+      <!-- 分頁內容 -->
+      <PaginationContent v-slot="{ items }" class="gap-1">
+        <!-- 上一頁按鈕 -->
+        <PaginationPrevious
+          class="h-9 border-teal-200 bg-white text-teal-700 transition-colors hover:bg-teal-50 hover:text-teal-800"
+        >
+          {{ prevButtonText }}
+        </PaginationPrevious>
+
+        <!-- 頁碼與省略號 -->
         <template v-for="(item, index) in items" :key="`page-item-${index}`">
-          <!-- 一般頁碼按鈕：可點擊跳轉，並高亮目前頁。 -->
-          <PaginationItem v-if="item.type === 'page'" :value="item.value" :is-active="item.value === page">
+          <PaginationItem
+            v-if="item.type === 'page'"
+            :value="item.value"
+            :is-active="item.value === page"
+            class="h-9 min-w-9 border-teal-200 text-teal-700 transition-colors hover:bg-teal-50 hover:text-teal-800 data-[active=true]:border-teal-600 data-[active=true]:bg-teal-600 data-[active=true]:text-white"
+          >
             {{ item.value }}
           </PaginationItem>
-          <!-- 省略號項目：當頁碼過多時顯示中間省略。 -->
-          <PaginationEllipsis v-else :index="index" />
+          <PaginationEllipsis v-else :index="index" class="text-teal-500" />
         </template>
-        <!-- 下一頁按鈕：使用外部傳入文案。 -->
-        <PaginationNext>{{ nextButtonText }}</PaginationNext>
+
+        <!-- 下一頁按鈕 -->
+        <PaginationNext
+          class="h-9 border-teal-200 bg-white text-teal-700 transition-colors hover:bg-teal-50 hover:text-teal-800"
+        >
+          {{ nextButtonText }}
+        </PaginationNext>
       </PaginationContent>
     </Pagination>
   </div>
