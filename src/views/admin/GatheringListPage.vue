@@ -1,26 +1,27 @@
 <script setup lang="ts">
-import { computed, ref, watch, watchEffect, defineComponent, h } from 'vue'
-import type { PropType } from 'vue'
-import type { BadgeVariants } from '@/components/ui/badge'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { computed, ref, watch, watchEffect } from 'vue'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { TableCell } from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { useGatheringsQuery } from '@/api/gatherings/gatherings.api'
-import type { GatheringStatus, GatheringType } from '@/api/gatherings/gatherings.types'
+import { isGatheringStatus, isGatheringType } from '@/api/gatherings/gatherings.guards'
+import type { GatheringItem, GetGatheringsQuery } from '@/api/gatherings/gatherings.types'
 import {
   GATHERING_LIST_TEXT,
   GATHERING_STATUS_OPTIONS,
-  GATHERING_STATUS_TEXT_MAP,
   GATHERING_TYPE_OPTIONS,
   GATHERING_TYPE_TEXT_MAP,
 } from '@/api/gatherings/gatheringsList.text'
 import TableFilterControls from '@/components/table/TableFilterControls.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
+import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
+import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
 import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
 import TableDataGrid from '@/components/table/TableDataGrid.vue'
+import TruncateTooltipCell from '@/components/table/TruncateTooltipCell.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
 import { useTableControls } from '@/composables/useTableControls'
+import { applyTypedFilterUpdate, toMappedText } from '@/lib/tableDisplay'
 
 /** 共用表格控制器（搜尋、篩選、分頁） */
 const tableControls = useTableControls<'status' | 'type'>({
@@ -32,25 +33,34 @@ const tableControls = useTableControls<'status' | 'type'>({
 })
 
 /** 活動列表 API 查詢參數 */
-const queryParams = computed(() => ({
-  page: tableControls.page.value,
-  limit: tableControls.limit.value,
-  sortBy: 'createdAt' as const,
-  sortOrder: 'DESC' as const,
-  search: tableControls.searchKeyword.value || undefined,
-  status: (tableControls.filters.status || undefined) as GatheringStatus | undefined,
-  type: (tableControls.filters.type || undefined) as GatheringType | undefined,
-}))
+const queryParams = computed(
+  () =>
+    ({
+      page: tableControls.page.value,
+      limit: tableControls.limit.value,
+      sortBy: 'createdAt',
+      sortOrder: 'DESC',
+      search: tableControls.searchKeyword.value || undefined,
+      status: isGatheringStatus(tableControls.filters.status)
+        ? tableControls.filters.status
+        : undefined,
+      type: isGatheringType(tableControls.filters.type) ? tableControls.filters.type : undefined,
+    }) satisfies GetGatheringsQuery,
+)
 
 /** 活動列表查詢結果 */
 const gatheringsQuery = useGatheringsQuery(queryParams)
 watchEffect(() => {
+  // 當查詢結果更新時，同步更新分頁器的總筆數
   tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
 })
+
+/** 是否顯示錯誤彈窗 */
 const isErrorDialogOpen = ref(false)
 watch(
   () => gatheringsQuery.isError.value,
   (isError, wasError) => {
+    // 只有在錯誤狀態從 false 變成 true 時才開啟彈窗
     if (isError && !wasError) {
       isErrorDialogOpen.value = true
     }
@@ -58,11 +68,14 @@ watch(
 )
 
 /** 目前頁面要顯示的活動資料 */
-const gatheringRows = computed<Record<string, unknown>[]>(() =>
-  (gatheringsQuery.data.value?.gatheringData ?? []) as unknown as Record<string, unknown>[],
-)
+const gatheringRows = computed<Record<string, unknown>[]>(() => {
+  const items = gatheringsQuery.data.value?.gatheringData ?? []
+  return items.map((item: GatheringItem): Record<string, unknown> => ({ ...item }))
+})
+
 /** 頁面文案 */
 const text = GATHERING_LIST_TEXT
+
 /** 共用表格篩選欄位設定 */
 const filterControls = computed<TableFilterControl[]>(() => [
   {
@@ -78,6 +91,7 @@ const filterControls = computed<TableFilterControl[]>(() => [
     options: GATHERING_TYPE_OPTIONS,
   },
 ])
+
 /** 列表表頭欄位 */
 const tableColumns = [
   { key: 'id', label: text.table.id },
@@ -91,103 +105,44 @@ const tableColumns = [
   { key: 'price', label: text.table.price },
 ]
 
+/** 更新指定篩選欄位的值（狀態 / 類型） */
 function onFilterUpdate(payload: { key: string; value: string }) {
-  tableControls.updateFilterValue(payload.key as 'status' | 'type', payload.value)
-}
+  const key = payload.key
 
-/** 將活動狀態代碼轉為中文文字 */
-function isMapKey<T extends string>(value: unknown, map: Record<T, string>): value is T {
-  return typeof value === 'string' && value in map
-}
+  if (key !== 'status' && key !== 'type') {
+    return
+  }
 
-function toMappedText<T extends string>(value: unknown, map: Record<T, string>) {
-  return isMapKey(value, map) ? map[value] : '-'
+  applyTypedFilterUpdate<'status' | 'type'>(tableControls.updateFilterValue, {
+    key,
+    value: payload.value,
+  })
 }
-
-function isGatheringStatus(value: unknown): value is GatheringStatus {
-  return isMapKey(value, GATHERING_STATUS_TEXT_MAP)
-}
-
-/** 將活動狀態代碼轉為中文文字 */
-function toStatusText(status: unknown) {
-  return toMappedText(status, GATHERING_STATUS_TEXT_MAP)
-}
-
-/** 將活動類型代碼轉為中文文字 */
-function toTypeText(type: unknown) {
-  return toMappedText(type, GATHERING_TYPE_TEXT_MAP)
-}
-
-/** 根據活動狀態回傳對應 badge 樣式 */
-function toStatusBadgeVariant(status: unknown): BadgeVariants['variant'] {
-  if (!isGatheringStatus(status)) return 'secondary'
-  if (status === 'OPEN') return 'default'
-  if (status === 'UPCOMING') return 'secondary'
-  return 'destructive'
-}
-
-function onRetryLoadGatherings() {
-  isErrorDialogOpen.value = false
-  gatheringsQuery.refetch()
-}
-
-function onErrorDialogOpenChange(value: boolean) {
-  isErrorDialogOpen.value = value
-}
-
-const TruncateTooltipCell = defineComponent({
-  name: 'TruncateTooltipCell',
-  props: {
-    value: {
-      type: null as unknown as PropType<unknown>,
-      default: '',
-    },
-  },
-  setup(props) {
-    return () =>
-      h(TableCell, { class: 'max-w-[220px] text-left!' }, () =>
-        h(Tooltip, null, {
-          default: () => [
-            h(
-              TooltipTrigger,
-              { asChild: true },
-              () =>
-                h('div', { class: 'flex w-full justify-start' }, [
-                  h('span', { class: 'inline-block max-w-full truncate text-left' }, String(props.value || '-')),
-                ]),
-            ),
-            h(TooltipContent, null, () => String(props.value || '-')),
-          ],
-        }),
-      )
-  },
-})
 </script>
 
 <template>
   <main>
     <section>
+      <!-- 活動列表主卡片：包含查詢、列表、分頁與錯誤提示 -->
       <Card>
         <CardHeader>
-          <div>
-            <CardTitle>{{ text.title }}</CardTitle>
-            <p>{{ text.subtitle }}</p>
-          </div>
+          <!-- 頁面標題與副標：抽成共用元件，統一卡片頂部視覺 -->
+          <CardSectionTitle :title="text.title" :subtitle="text.subtitle" />
         </CardHeader>
 
         <CardContent>
-          <div class="overflow-hidden rounded-xl border border-cyan-200 shadow-sm">
-            <TableFilterControls
-              :search-value="tableControls.searchInput.value"
-              :search-label="text.labels.search"
-              :search-placeholder="text.placeholders.search"
-              :search-button-text="text.actions.search"
-              :filters="filterControls"
-              @update:search-value="tableControls.updateSearchInput"
-              @update:filter="onFilterUpdate"
-              @search="tableControls.onSearch"
-            />
-
+          <!-- 搜尋與篩選控制列 -->
+          <TableFilterControls
+            :search-value="tableControls.searchInput.value"
+            :search-label="text.labels.search"
+            :search-placeholder="text.placeholders.search"
+            :search-button-text="text.actions.search"
+            :filters="filterControls"
+            @update:search-value="tableControls.updateSearchInput"
+            @update:filter="onFilterUpdate"
+            @search="tableControls.onSearch"
+          >
+            <!-- TooltipProvider 提供整個表格列內提示框功能 -->
             <TooltipProvider>
               <TableDataGrid
                 :columns="tableColumns"
@@ -197,23 +152,28 @@ const TruncateTooltipCell = defineComponent({
                 :empty-text="text.states.empty"
               >
                 <template #row="{ row: gathering }">
-                    <TableCell class="text-center">{{ gathering.id }}</TableCell>
-                    <TruncateTooltipCell :value="String(gathering.title ?? '-')" />
-                    <TableCell class="text-center">{{ toTypeText(gathering.type) }}</TableCell>
-                    <TableCell class="text-center">
-                      <Badge :variant="toStatusBadgeVariant(gathering.status)">
-                        {{ toStatusText(gathering.status) }}
-                      </Badge>
-                    </TableCell>
-                    <TruncateTooltipCell :value="String(gathering.location ?? '-')" />
-                    <TableCell class="text-center">{{ gathering.startTime }}</TableCell>
-                    <TableCell class="text-center">{{ gathering.deadline }}</TableCell>
-                    <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
-                    <TableCell class="text-center">${{ gathering.price }}</TableCell>
+                  <!-- 活動資料列：依 tableColumns 順序渲染每一欄 -->
+                  <TableCell class="text-center">{{ gathering.id }}</TableCell>
+                  <!-- 長文字欄位使用截斷 + hover tooltip -->
+                  <TruncateTooltipCell :value="String(gathering.title ?? '-')" />
+                  <TableCell class="text-center">
+                    {{ toMappedText(gathering.type, GATHERING_TYPE_TEXT_MAP) }}
+                  </TableCell>
+                  <TableCell class="text-center">
+                    <!-- 狀態以 badge 顯示，文字與樣式由映射表統一管理 -->
+                    <GatheringStatusBadge :status="gathering.status" />
+                  </TableCell>
+                  <TruncateTooltipCell :value="String(gathering.location ?? '-')" />
+                  <TableCell class="text-center">{{ gathering.startTime }}</TableCell>
+                  <TableCell class="text-center">{{ gathering.deadline }}</TableCell>
+                  <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
+                  <!-- 價格維持美元符號前綴顯示 -->
+                  <TableCell class="text-center">${{ gathering.price }}</TableCell>
                 </template>
               </TableDataGrid>
             </TooltipProvider>
 
+            <!-- 分頁列：依 tableControls 的狀態切換頁碼 -->
             <TablePaginationBar
               :total="tableControls.total.value"
               :page="tableControls.page.value"
@@ -223,14 +183,20 @@ const TruncateTooltipCell = defineComponent({
               :next-button-text="text.actions.nextPage"
               @go-page="tableControls.setPage"
             />
-          </div>
+          </TableFilterControls>
 
+          <!-- API 載入失敗時顯示錯誤彈窗，並提供重試 -->
           <AlertDialog
             :open="isErrorDialogOpen"
             variant="error"
             show-retry
-            @update:open="onErrorDialogOpenChange"
-            @retry="onRetryLoadGatherings"
+            @update:open="(value) => (isErrorDialogOpen = value)"
+            @retry="
+              () => {
+                isErrorDialogOpen = false
+                gatheringsQuery.refetch()
+              }
+            "
           />
         </CardContent>
       </Card>
