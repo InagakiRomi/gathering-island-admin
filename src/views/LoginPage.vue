@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthPageButton from '@/components/auth/AuthPageButton.vue'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { ApiClientError } from '@/api/apiClient'
@@ -99,9 +100,11 @@ function handleLogin() {
       </div>
       <!-- 登入表單卡片 -->
       <Card class="w-full max-w-98 py-8 bg-white/95 shadow-xl">
-        <CardContent>
+        <CardHeader>
           <!-- 標題 -->
-          <h1 class="mb-5 text-center text-xl font-semibold tracking-wide">聚會島後台管理</h1>
+          <CardTitle class="text-center text-xl tracking-wide">聚會島後台管理</CardTitle>
+        </CardHeader>
+        <CardContent>
           <!-- 登入表單 -->
           <form class="flex flex-col gap-5" @submit.prevent="handleLogin">
             <!-- 電子郵件欄位 -->
@@ -120,15 +123,17 @@ function handleLogin() {
                   :type="showPassword ? 'text' : 'password'"
                   autocomplete="current-password"
                 />
-                <button
+                <Button
                   type="button"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 size-8 grid place-items-center text-muted-foreground transition-colors hover:text-foreground"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   :aria-label="showPassword ? '隱藏密碼' : '顯示密碼'"
                   @click="showPassword = !showPassword"
                 >
                   <Eye v-if="!showPassword" class="size-5" />
                   <EyeOff v-else class="size-5" />
-                </button>
+                </Button>
               </div>
             </div>
 

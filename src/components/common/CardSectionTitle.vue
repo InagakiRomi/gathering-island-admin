@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CardTitle } from '@/components/ui/card'
+import { CardDescription, CardTitle } from '@/components/ui/card'
 
 // 卡片區塊標題與副標，供父層頁面直接傳入顯示文字。
 defineProps<{
@@ -28,9 +28,9 @@ defineProps<{
         <CardTitle class="text-lg font-semibold tracking-tight text-slate-800 sm:text-xl">
           {{ title }}
         </CardTitle>
-        <p class="mt-1 text-sm leading-relaxed text-slate-600">
+        <CardDescription class="mt-1 text-sm leading-relaxed text-slate-600">
           {{ subtitle }}
-        </p>
+        </CardDescription>
       </div>
     </div>
   </div>
