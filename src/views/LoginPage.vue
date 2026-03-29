@@ -9,8 +9,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
-import { toLoginErrorMessage, LOGIN_FAILED_MESSAGE } from '@/api/auth/authErrorMessages'
-import { useAuthLoginMutation } from '@/api/auth/auth.api'
+import { AuthErrorMessages } from '@/api/auth/authErrorMessages'
+import { AuthApi } from '@/api/auth/auth.api'
+import { AuthStore } from '@/stores/auth'
 
 /** 使用者輸入的電子郵件 */
 const email = ref('')
@@ -25,10 +26,11 @@ const showPassword = ref(false)
 const errorMessage = ref('')
 
 /** 登入 mutation */
-const authLoginMutation = useAuthLoginMutation()
+const authLoginMutation = AuthApi.useAuthLoginMutation()
 
 /** 路由實例（登入成功導頁用） */
 const router = useRouter()
+const authStore = AuthStore.useStore()
 
 /** 是否正在送出登入請求 */
 const isSubmitting = computed(() => authLoginMutation.isPending.value)
@@ -62,18 +64,18 @@ function handleLogin() {
     { email: emailValue, password: passwordValue },
     {
       onSuccess(result) {
-        localStorage.setItem('accessToken', result.accessToken)
+        authStore.setAccessToken(result.accessToken)
         void router.push('/admin/gatherings')
       },
       onError(error: unknown) {
         if (!(error instanceof ApiClientError)) {
-          errorMessage.value = LOGIN_FAILED_MESSAGE
+          errorMessage.value = AuthErrorMessages.LOGIN_FAILED_MESSAGE
           return
         }
 
         // 取得後端回傳的錯誤代碼並轉換為中文訊息
         const payload = error.data as ErrorPayload | undefined
-        errorMessage.value = toLoginErrorMessage(payload?.code)
+        errorMessage.value = AuthErrorMessages.toLoginErrorMessage(payload?.code)
       },
     },
   )

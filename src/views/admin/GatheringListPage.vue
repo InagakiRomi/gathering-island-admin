@@ -1,17 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch, watchEffect } from 'vue'
+import { computed, watch, watchEffect } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { TableCell } from '@/components/ui/table'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { useGatheringsQuery } from '@/api/gatherings/gatherings.api'
-import { isGatheringStatus, isGatheringType } from '@/api/gatherings/gatherings.guards'
-import type { GatheringItem, GetGatheringsQuery } from '@/api/gatherings/gatherings.types'
-import {
-  GATHERING_LIST_TEXT,
-  GATHERING_STATUS_OPTIONS,
-  GATHERING_TYPE_OPTIONS,
-  GATHERING_TYPE_TEXT_MAP,
-} from '@/api/gatherings/gatheringsList.text'
+import { GatheringsApi } from '@/api/gatherings/gatherings.api'
+import type { GatheringItem } from '@/api/gatherings/gatherings.types'
+import { GatheringsListText } from '@/api/gatherings/gatheringsList.text'
 import TableFilterControls from '@/components/table/TableFilterControls.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
@@ -20,49 +15,41 @@ import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
 import TableDataGrid from '@/components/table/TableDataGrid.vue'
 import TruncateTooltipCell from '@/components/table/TruncateTooltipCell.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
-import { useTableControls } from '@/composables/useTableControls'
-import { applyTypedFilterUpdate, toMappedText } from '@/lib/tableDisplay'
+import { TableDisplay } from '@/lib/tableDisplay'
+import { GatheringListStore } from '@/stores/gatheringList'
 
 /** 共用表格控制器（搜尋、篩選、分頁） */
-const tableControls = useTableControls<'status' | 'type'>({
-  initialFilters: {
-    status: '',
-    type: '',
-  },
-  initialLimit: 20,
-})
-
-/** 活動列表 API 查詢參數 */
-const queryParams = computed(
-  () =>
-    ({
-      page: tableControls.page.value,
-      limit: tableControls.limit.value,
-      sortBy: 'createdAt',
-      sortOrder: 'DESC',
-      search: tableControls.searchKeyword.value || undefined,
-      status: isGatheringStatus(tableControls.filters.status)
-        ? tableControls.filters.status
-        : undefined,
-      type: isGatheringType(tableControls.filters.type) ? tableControls.filters.type : undefined,
-    }) satisfies GetGatheringsQuery,
-)
+const gatheringListStore = GatheringListStore.useStore()
+const { page, limit, total, searchInput, searchKeyword, totalPages, queryParams, isErrorDialogOpen } =
+  storeToRefs(gatheringListStore)
+const tableControls = {
+  page,
+  limit,
+  total,
+  searchInput,
+  searchKeyword,
+  filters: gatheringListStore.filters,
+  totalPages,
+  onSearch: gatheringListStore.onSearch,
+  updateFilterValue: gatheringListStore.updateFilterValue,
+  updateSearchInput: gatheringListStore.updateSearchInput,
+  setTotal: gatheringListStore.setTotal,
+  setPage: gatheringListStore.setPage,
+}
 
 /** 活動列表查詢結果 */
-const gatheringsQuery = useGatheringsQuery(queryParams)
+const gatheringsQuery = GatheringsApi.useGatheringsQuery(queryParams)
 watchEffect(() => {
   // 當查詢結果更新時，同步更新分頁器的總筆數
   tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
 })
 
-/** 是否顯示錯誤彈窗 */
-const isErrorDialogOpen = ref(false)
 watch(
   () => gatheringsQuery.isError.value,
   (isError, wasError) => {
     // 只有在錯誤狀態從 false 變成 true 時才開啟彈窗
     if (isError && !wasError) {
-      isErrorDialogOpen.value = true
+      gatheringListStore.openErrorDialog()
     }
   },
 )
@@ -74,7 +61,7 @@ const gatheringRows = computed<Record<string, unknown>[]>(() => {
 })
 
 /** 頁面文案 */
-const text = GATHERING_LIST_TEXT
+const text = GatheringsListText.TEXT
 
 /** 共用表格篩選欄位設定 */
 const filterControls = computed<TableFilterControl[]>(() => [
@@ -82,13 +69,13 @@ const filterControls = computed<TableFilterControl[]>(() => [
     key: 'status',
     label: text.labels.status,
     value: tableControls.filters.status,
-    options: GATHERING_STATUS_OPTIONS,
+    options: GatheringsListText.STATUS_OPTIONS,
   },
   {
     key: 'type',
     label: text.labels.type,
     value: tableControls.filters.type,
-    options: GATHERING_TYPE_OPTIONS,
+    options: GatheringsListText.TYPE_OPTIONS,
   },
 ])
 
@@ -113,7 +100,7 @@ function onFilterUpdate(payload: { key: string; value: string }) {
     return
   }
 
-  applyTypedFilterUpdate<'status' | 'type'>(tableControls.updateFilterValue, {
+  TableDisplay.applyTypedFilterUpdate<'status' | 'type'>(tableControls.updateFilterValue, {
     key,
     value: payload.value,
   })
@@ -157,7 +144,7 @@ function onFilterUpdate(payload: { key: string; value: string }) {
                   <!-- 長文字欄位使用截斷 + hover tooltip -->
                   <TruncateTooltipCell :value="String(gathering.title ?? '-')" />
                   <TableCell class="text-center">
-                    {{ toMappedText(gathering.type, GATHERING_TYPE_TEXT_MAP) }}
+                    {{ TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP) }}
                   </TableCell>
                   <TableCell class="text-center">
                     <!-- 狀態以 badge 顯示，文字與樣式由映射表統一管理 -->
@@ -190,10 +177,19 @@ function onFilterUpdate(payload: { key: string; value: string }) {
             :open="isErrorDialogOpen"
             variant="error"
             show-retry
-            @update:open="(value) => (isErrorDialogOpen = value)"
+            @update:open="
+              (value) => {
+                if (value) {
+                  gatheringListStore.openErrorDialog()
+                  return
+                }
+
+                gatheringListStore.closeErrorDialog()
+              }
+            "
             @retry="
               () => {
-                isErrorDialogOpen = false
+                gatheringListStore.closeErrorDialog()
                 gatheringsQuery.refetch()
               }
             "

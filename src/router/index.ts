@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
+import { AuthStore } from '@/stores/auth'
+import { PiniaStore } from '@/stores/pinia'
 
 /** 全站路由設定 */
 const router = createRouter({
@@ -32,11 +34,11 @@ function routeGuard(to: RouteLocationNormalized) {
   // 讀取目標路由的 requiresAuth 元資料
   const requiresAuth = Boolean(to.meta.requiresAuth)
 
-  // 讀取目前登入者的 access token
-  const accessToken = localStorage.getItem('accessToken')
+  // 從 Pinia 取得目前登入狀態
+  const authStore = AuthStore.useStore(PiniaStore.instance)
 
   // 如果目標路由需要登入且沒有 token，則導向登入頁
-  if (requiresAuth && !accessToken) {
+  if (requiresAuth && !authStore.isAuthenticated) {
     return { path: '/login' }
   }
 

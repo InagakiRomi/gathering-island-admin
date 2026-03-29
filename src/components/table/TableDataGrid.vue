@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import { cn } from '@/lib/utils'
+import { Utils } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -50,7 +50,7 @@ const props = withDefaults(
         <TableHead
           v-for="column in props.columns"
           :key="column.key"
-          :class="cn('text-center', column.class)"
+          :class="Utils.cn('text-center', column.class)"
         >
           {{ column.label }}
         </TableHead>
