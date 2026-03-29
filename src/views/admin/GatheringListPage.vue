@@ -3,7 +3,6 @@ import { computed, watch, watchEffect } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { TableCell } from '@/components/ui/table'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import { GatheringsApi } from '@/api/gatherings/gatherings.api'
 import type { GatheringItem } from '@/api/gatherings/gatherings.types'
 import { GatheringsListText } from '@/api/gatherings/gatheringsList.text'
@@ -13,7 +12,6 @@ import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
 import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
 import TableDataGrid from '@/components/table/TableDataGrid.vue'
-import TruncateTooltipCell from '@/components/table/TruncateTooltipCell.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
 import { TableDisplay } from '@/lib/tableDisplay'
 import { GatheringListStore } from '@/stores/gatheringList'
@@ -105,6 +103,12 @@ function onFilterUpdate(payload: { key: string; value: string }) {
     value: payload.value,
   })
 }
+
+/** 統一處理空值與空白字串，避免表格顯示空白內容 */
+function getDisplayText(value: string | null | undefined, fallbackText = '-') {
+  const text = String(value ?? '').trim()
+  return text === '' ? fallbackText : text
+}
 </script>
 
 <template>
@@ -129,36 +133,44 @@ function onFilterUpdate(payload: { key: string; value: string }) {
             @update:filter="onFilterUpdate"
             @search="tableControls.onSearch"
           >
-            <!-- TooltipProvider 提供整個表格列內提示框功能 -->
-            <TooltipProvider>
-              <TableDataGrid
-                :columns="tableColumns"
-                :rows="gatheringRows"
-                :is-loading="gatheringsQuery.isPending.value"
-                :loading-text="text.states.loading"
-                :empty-text="text.states.empty"
-              >
-                <template #row="{ row: gathering }">
-                  <!-- 活動資料列：依 tableColumns 順序渲染每一欄 -->
-                  <TableCell class="text-center">{{ gathering.id }}</TableCell>
-                  <!-- 長文字欄位使用截斷 + hover tooltip -->
-                  <TruncateTooltipCell :value="String(gathering.title ?? '-')" />
-                  <TableCell class="text-center">
-                    {{ TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP) }}
-                  </TableCell>
-                  <TableCell class="text-center">
-                    <!-- 狀態以 badge 顯示，文字與樣式由映射表統一管理 -->
-                    <GatheringStatusBadge :status="gathering.status" />
-                  </TableCell>
-                  <TruncateTooltipCell :value="String(gathering.location ?? '-')" />
-                  <TableCell class="text-center">{{ gathering.startTime }}</TableCell>
-                  <TableCell class="text-center">{{ gathering.deadline }}</TableCell>
-                  <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
-                  <!-- 價格維持美元符號前綴顯示 -->
-                  <TableCell class="text-center">${{ gathering.price }}</TableCell>
-                </template>
-              </TableDataGrid>
-            </TooltipProvider>
+            <TableDataGrid
+              :columns="tableColumns"
+              :rows="gatheringRows"
+              :is-loading="gatheringsQuery.isPending.value"
+              :loading-text="text.states.loading"
+              :empty-text="text.states.empty"
+            >
+              <template #row="{ row: gathering }">
+                <!-- 活動資料列：依 tableColumns 順序渲染每一欄 -->
+                <TableCell class="text-center">{{ gathering.id }}</TableCell>
+                <TableCell class="max-w-[220px] text-left!">
+                  <div class="flex w-full justify-start">
+                    <span class="inline-block max-w-full truncate text-left">
+                      {{ getDisplayText(String(gathering.title ?? '-')) }}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell class="text-center">
+                  {{ TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP) }}
+                </TableCell>
+                <TableCell class="text-center">
+                  <!-- 狀態以 badge 顯示，文字與樣式由映射表統一管理 -->
+                  <GatheringStatusBadge :status="gathering.status" />
+                </TableCell>
+                <TableCell class="max-w-[220px] text-left!">
+                  <div class="flex w-full justify-start">
+                    <span class="inline-block max-w-full truncate text-left">
+                      {{ getDisplayText(String(gathering.location ?? '-')) }}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell class="text-center">{{ gathering.startTime }}</TableCell>
+                <TableCell class="text-center">{{ gathering.deadline }}</TableCell>
+                <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
+                <!-- 價格維持美元符號前綴顯示 -->
+                <TableCell class="text-center">${{ gathering.price }}</TableCell>
+              </template>
+            </TableDataGrid>
 
             <!-- 分頁列：依 tableControls 的狀態切換頁碼 -->
             <TablePaginationBar
