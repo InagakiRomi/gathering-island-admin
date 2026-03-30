@@ -64,7 +64,7 @@ function handleLogin() {
     {
       onSuccess() {
         // 登入成功後導向後台主頁
-        void router.push('/admin/gatherings')
+        void router.push('/admin/dashboard')
       },
       onError(error: unknown) {
         if (!(error instanceof ApiClientError)) {

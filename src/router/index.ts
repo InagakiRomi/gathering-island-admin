@@ -27,7 +27,12 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/admin/gatherings',
+          redirect: '/admin/dashboard',
+        },
+        {
+          path: 'dashboard',
+          name: 'admin-dashboard',
+          component: () => import('@/views/admin/DashboardPage.vue'),
         },
         {
           path: 'gatherings',

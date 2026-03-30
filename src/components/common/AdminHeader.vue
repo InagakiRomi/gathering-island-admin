@@ -84,7 +84,7 @@ function handleLogoutErrorDialogOpen(value: boolean) {
       </Button>
 
       <!-- logo 區塊：點擊後回到後台主頁 -->
-      <RouterLink to="/admin/gatherings" class="flex items-center gap-4">
+      <RouterLink to="/admin/dashboard" class="flex items-center gap-4">
         <img src="/logo_title.svg" alt="聚會島 logo" class="h-12 w-auto" />
         <span
           class="text-sm font-semibold tracking-wide text-teal-600 sm:text-base dark:text-teal-400"

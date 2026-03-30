@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute, RouterLink } from 'vue-router'
-import { faCampground } from '@fortawesome/free-solid-svg-icons'
+import { faCampground, faHouse } from '@fortawesome/free-solid-svg-icons'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -17,7 +17,10 @@ const emit = defineEmits<{
 const route = useRoute()
 
 /** 側邊欄導覽項目 */
-const navigationItems = [{ label: '活動列表', to: '/admin/gatherings', icon: faCampground }]
+const navigationItems = [
+  { label: '儀錶板', to: '/admin/dashboard', icon: faHouse },
+  { label: '活動列表', to: '/admin/gatherings', icon: faCampground },
+]
 
 /** 判斷目前路由是否落在指定路徑 */
 function isActiveRoute(path: string) {
