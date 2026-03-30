@@ -17,7 +17,7 @@ export type AuthLoginResponse = {
 export type AuthRegisterRequest = {
   email: string
   password: string
-  displayName: string
+  role: string
 }
 
 /** 註冊成功時後端回傳的回應 */

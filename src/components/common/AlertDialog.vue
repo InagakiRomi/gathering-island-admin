@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 /** 提示框的類型 */
 type AlertVariant = 'error' | 'success'
@@ -20,8 +27,8 @@ type ToneConfig = {
     title: string
     alert: string
     description: string
-    primaryButton: string
-    secondaryButton: string
+    actionButton: string
+    cancelButton: string
   }
 }
 
@@ -40,8 +47,8 @@ const TONE_CONFIG: Record<AlertVariant, ToneConfig> = {
       title: 'text-lg font-semibold text-rose-800',
       alert: 'border-rose-200 bg-white/95 text-rose-900',
       description: 'text-slate-700',
-      primaryButton: 'border-0 shadow-none bg-rose-600 text-white hover:bg-rose-700',
-      secondaryButton: 'border-rose-200 bg-white/95 text-rose-800 hover:bg-rose-50',
+      actionButton: 'border-0 shadow-none bg-rose-600 text-white hover:bg-rose-700',
+      cancelButton: 'border-rose-200 bg-white/95 text-rose-800 hover:bg-rose-50',
     },
   },
   success: {
@@ -57,8 +64,8 @@ const TONE_CONFIG: Record<AlertVariant, ToneConfig> = {
       title: 'text-lg font-semibold text-teal-800',
       alert: 'border-teal-200 bg-white/95 text-slate-700',
       description: 'text-slate-700',
-      primaryButton: 'bg-teal-600 text-white hover:bg-teal-700',
-      secondaryButton: 'border-teal-200 bg-white/95 text-slate-700 hover:bg-teal-50',
+      actionButton: 'bg-teal-600 text-white hover:bg-teal-700',
+      cancelButton: 'border-teal-200 bg-white/95 text-slate-700 hover:bg-teal-50',
     },
   },
 }
@@ -74,7 +81,7 @@ const props = withDefaults(
     retryText?: string
     showRetry?: boolean
   }>(),
-  { variant: 'error' },
+  { variant: 'error', showRetry: true },
 )
 
 /** 元件的事件 */
@@ -92,49 +99,48 @@ const resolved = computed(() => ({
   description: props.description ?? tone.value.text.description,
   closeText: props.closeText ?? tone.value.text.closeText,
   retryText: props.retryText ?? tone.value.text.retryText,
-  showRetry: props.variant === 'error' && props.showRetry !== false,
+  showRetry: props.variant === 'error' && props.showRetry,
 }))
 </script>
 
 <template>
   <!-- 彈窗開關由父層控制 -->
-  <Dialog :open="props.open" @update:open="(value) => emit('update:open', value)">
+  <AlertDialog :open="props.open" @update:open="(value) => emit('update:open', value)">
     <!-- 彈窗內容與樣式 -->
-    <DialogContent
-      :show-close-button="false"
+    <AlertDialogContent
       :class="tone.classes.dialog"
       @open-auto-focus="(event) => event.preventDefault()"
     >
       <!-- 顯示標題 -->
-      <DialogTitle :class="tone.classes.title">{{ resolved.title }}</DialogTitle>
+      <AlertDialogHeader>
+        <AlertDialogTitle :class="tone.classes.title">{{ resolved.title }}</AlertDialogTitle>
+      </AlertDialogHeader>
 
       <!-- 顯示訊息內容 -->
-      <Alert :class="tone.classes.alert">
-        <AlertDescription :class="tone.classes.description">
+      <div :class="`rounded-lg border px-4 py-3 text-sm ${tone.classes.alert}`">
+        <AlertDialogDescription :class="tone.classes.description">
           {{ resolved.description }}
-        </AlertDescription>
-      </Alert>
+        </AlertDialogDescription>
+      </div>
 
       <!-- 底部操作按鈕 -->
-      <DialogFooter>
+      <AlertDialogFooter>
         <!-- 需要時顯示重試按鈕 -->
-        <Button
+        <AlertDialogAction
           v-if="resolved.showRetry"
-          :class="tone.classes.primaryButton"
+          :class="tone.classes.actionButton"
           @click="emit('retry')"
         >
           {{ resolved.retryText }}
-        </Button>
+        </AlertDialogAction>
 
         <!-- 關閉彈窗 -->
-        <Button
-          variant="outline"
-          :class="tone.classes.secondaryButton"
-          @click="emit('update:open', false)"
+        <AlertDialogCancel
+          :class="tone.classes.cancelButton"
         >
           {{ resolved.closeText }}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+        </AlertDialogCancel>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>

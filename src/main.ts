@@ -1,5 +1,8 @@
 import { createApp } from 'vue'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faBars, faRightFromBracket, faTableList, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import App from './App.vue'
 import router from './router'
@@ -22,9 +25,17 @@ const queryClient = new QueryClient({
   },
 })
 
-// 先註冊狀態管理，再註冊路由與資料查詢插件。
+// 添加 Font Awesome 圖示
+library.add(faBars, faRightFromBracket, faTableList, faXmark)
+app.component('FontAwesomeIcon', FontAwesomeIcon)
+
+// 註冊狀態管理
 app.use(PiniaStore.instance)
+
+// 註冊路由
 app.use(router)
+
+// 註冊資料查詢插件
 app.use(VueQueryPlugin, { queryClient })
 
 // 掛載到 index.html 的 #app 節點。

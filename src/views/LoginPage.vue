@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import AuthPageButton from '@/components/auth/AuthPageButton.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Eye, EyeOff } from 'lucide-vue-next'
 import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
 import { AuthErrorMessages } from '@/api/auth/authErrorMessages'
@@ -126,13 +126,12 @@ function handleLogin() {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  size="sm"
+                  class="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-full px-2 text-muted-foreground hover:bg-sky-100/70 hover:text-sky-700 focus-visible:ring-sky-300/60"
                   :aria-label="showPassword ? '隱藏密碼' : '顯示密碼'"
                   @click="showPassword = !showPassword"
                 >
-                  <Eye v-if="!showPassword" class="size-5" />
-                  <EyeOff v-else class="size-5" />
+                  <FontAwesomeIcon :icon="showPassword ? faEyeSlash : faEye" class="size-4" />
                 </Button>
               </div>
             </div>

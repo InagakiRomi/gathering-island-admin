@@ -21,6 +21,11 @@ export class AuthApi {
     return data
   }
 
+  /** 呼叫後端 POST /auth/logout */
+  private static async authLogout(): Promise<void> {
+    await ApiClient.instance.post('/auth/logout')
+  }
+
   /** 提供登入 mutation */
   static useAuthLoginMutation() {
     return useMutation({
@@ -32,6 +37,13 @@ export class AuthApi {
   static useAuthRegisterMutation() {
     return useMutation({
       mutationFn: AuthApi.authRegister,
+    })
+  }
+
+  /** 提供登出 mutation */
+  static useAuthLogoutMutation() {
+    return useMutation({
+      mutationFn: AuthApi.authLogout,
     })
   }
 }

@@ -19,12 +19,22 @@ const router = createRouter({
       },
     },
     {
-      path: '/admin/gatherings',
-      name: 'admin-gatherings',
-      component: () => import('@/views/admin/GatheringListPage.vue'),
+      path: '/admin',
+      component: () => import('@/layouts/AdminLayout.vue'),
       meta: {
         requiresAuth: true,
       },
+      children: [
+        {
+          path: '',
+          redirect: '/admin/gatherings',
+        },
+        {
+          path: 'gatherings',
+          name: 'admin-gatherings',
+          component: () => import('@/views/admin/GatheringListPage.vue'),
+        },
+      ],
     },
   ],
 })
