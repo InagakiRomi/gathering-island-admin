@@ -23,29 +23,34 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const authStore = AuthStore.useStore()
+
+/** 登出 API */
 const authLogoutMutation = AuthApi.useAuthLogoutMutation()
 
-// 是否正在送出登出請求：用來防止重複送出並控制按鈕 disabled 狀態。
+/** 是否正在送出登出請求 */
 const isLogoutSubmitting = computed(() => authLogoutMutation.isPending.value)
-// 依 access token 的角色資訊顯示稱呼，避免固定寫死。
+
+/** 依 access token 的角色資訊顯示稱呼 */
 const role = computed(() => AuthRole.fromAccessToken(authStore.accessToken))
-// 控制登出錯誤對話框的開關與訊息內容。
+
+/** 控制登出錯誤對話框的開關 */
 const isLogoutErrorDialogOpen = ref(false)
+
+/** 登出失敗時顯示的錯誤訊息 */
 const logoutErrorMessage = ref('')
 
-// 登出成功後清除 token，並導回登入頁。
+/** 登出成功後導回登入頁 */
 function handleLogoutSuccess() {
-  authStore.clearAccessToken()
   void router.push('/login')
 }
 
-// 登出失敗時將錯誤轉為可顯示訊息，並開啟錯誤對話框。
+/** 登出失敗時顯示錯誤對話框 */
 function handleLogoutError(error: unknown) {
   logoutErrorMessage.value = AuthErrorMessages.toLogoutErrorMessage(error)
   isLogoutErrorDialogOpen.value = true
 }
 
-// 登出主流程：若請求中則略過，避免重複呼叫 API。
+/** 登出主流程 */
 function handleLogout() {
   if (isLogoutSubmitting.value) return
 
@@ -55,7 +60,7 @@ function handleLogout() {
   })
 }
 
-// 接收 AlertDialog 的開關事件，保持單一資料來源。
+/** 接收 AlertDialog 的開關事件 */
 function handleLogoutErrorDialogOpen(value: boolean) {
   isLogoutErrorDialogOpen.value = value
 }

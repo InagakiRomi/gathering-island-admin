@@ -12,7 +12,6 @@ import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
 import { AuthErrorMessages } from '@/api/auth/authErrorMessages'
 import { AuthApi } from '@/api/auth/auth.api'
-import { AuthStore } from '@/stores/auth'
 
 /** 使用者輸入的電子郵件 */
 const email = ref('')
@@ -31,7 +30,6 @@ const authLoginMutation = AuthApi.useAuthLoginMutation()
 
 /** 路由實例（登入成功導頁用） */
 const router = useRouter()
-const authStore = AuthStore.useStore()
 
 /** 是否正在送出登入請求 */
 const isSubmitting = computed(() => authLoginMutation.isPending.value)
@@ -64,8 +62,8 @@ function handleLogin() {
   authLoginMutation.mutate(
     { email: emailValue, password: passwordValue },
     {
-      onSuccess(result) {
-        authStore.setAccessToken(result.accessToken)
+      onSuccess() {
+        // 登入成功後導向後台主頁
         void router.push('/admin/gatherings')
       },
       onError(error: unknown) {
