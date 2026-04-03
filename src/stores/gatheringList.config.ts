@@ -1,5 +1,4 @@
-import { GatheringsGuards } from '@/api/gatherings/gatherings.guards'
-import type { GetGatheringsQuery } from '@/api/gatherings/gatherings.types'
+import { GatheringsGuards, type GetGatheringsQuery } from '@/api/gatherings'
 import type { BuildSeriesListQueryParamsContext } from '@/stores/seriesList'
 
 /** 活動列表設定 */

@@ -34,6 +34,7 @@ export interface GatheringItem {
   description: string
   location: string
   participantNumbers: number
+  currentParticipantCount?: number
   price: number
   type: GatheringType
   status: GatheringStatus
@@ -63,4 +64,9 @@ export interface GetGatheringsResponse {
   page: number
   limit: number
   total: number
+}
+
+/** 取得單一活動的 API 回應結構 */
+export interface GetGatheringByIdResponse {
+  gatheringData: GatheringItem
 }

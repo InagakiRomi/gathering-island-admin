@@ -10,8 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
-import { AuthErrorMessages } from '@/api/auth/authErrorMessages'
-import { AuthApi } from '@/api/auth/auth.api'
+import { AuthErrorMessages, useAuthLoginMutation } from '@/api/auth'
 
 /** 使用者輸入的電子郵件 */
 const email = ref('')
@@ -26,7 +25,7 @@ const showPassword = ref(false)
 const errorMessage = ref('')
 
 /** 登入 mutation */
-const authLoginMutation = AuthApi.useAuthLoginMutation()
+const authLoginMutation = useAuthLoginMutation()
 
 /** 路由實例（登入成功導頁用） */
 const router = useRouter()

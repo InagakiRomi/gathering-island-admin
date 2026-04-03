@@ -4,9 +4,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { faBars, faRightFromBracket, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { Button } from '@/components/ui/button'
 import AlertDialog from '@/components/common/AlertDialog.vue'
-import { AuthApi } from '@/api/auth/auth.api'
-import { AuthRole } from '@/api/auth/authRole'
-import { AuthErrorMessages } from '@/api/auth/authErrorMessages'
+import { AuthErrorMessages, AuthRole, useAuthLogoutMutation } from '@/api/auth'
 import { AuthStore } from '@/stores/auth'
 
 type Props = {
@@ -25,7 +23,7 @@ const router = useRouter()
 const authStore = AuthStore.useStore()
 
 /** 登出 API */
-const authLogoutMutation = AuthApi.useAuthLogoutMutation()
+const authLogoutMutation = useAuthLogoutMutation()
 
 /** 是否正在送出登出請求 */
 const isLogoutSubmitting = computed(() => authLogoutMutation.isPending.value)

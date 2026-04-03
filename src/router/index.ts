@@ -39,6 +39,11 @@ const router = createRouter({
           name: 'admin-gatherings',
           component: () => import('@/views/admin/GatheringListPage.vue'),
         },
+        {
+          path: 'gatherings/:id',
+          name: 'admin-gathering-detail',
+          component: () => import('@/views/admin/GatheringDetailPage.vue'),
+        },
       ],
     },
   ],

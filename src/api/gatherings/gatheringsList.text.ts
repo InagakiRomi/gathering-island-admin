@@ -25,6 +25,7 @@ export class GatheringsListText {
     /** 操作按鈕 */
     actions: {
       search: '搜尋',
+      detail: '詳細',
       // 上一頁按鈕
       prevPage: TableText.TEXT.actions.prevPage,
       // 下一頁按鈕
@@ -47,6 +48,7 @@ export class GatheringsListText {
       deadline: '截止時間',
       participantNumbers: '名額',
       price: '費用',
+      actions: '操作',
     },
 
     /** 頁面狀態文案，例如載入中或空資料 */

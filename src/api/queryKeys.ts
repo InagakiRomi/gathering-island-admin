@@ -12,5 +12,6 @@ export class QueryKeys {
   static readonly gatherings = {
     all: ['gatherings'] as const,
     list: (query: GetGatheringsQuery) => ['gatherings', 'list', query] as const,
+    detail: (id: number) => ['gatherings', 'detail', id] as const,
   }
 }

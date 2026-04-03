@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, watch, watchEffect } from 'vue'
+import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { TableCell } from '@/components/ui/table'
-import { GatheringsApi } from '@/api/gatherings/gatherings.api'
-import type { GatheringItem } from '@/api/gatherings/gatherings.types'
-import { GatheringsListText } from '@/api/gatherings/gatheringsList.text'
+import { GatheringsListText, useGatheringsQuery, type GatheringItem } from '@/api/gatherings'
 import TableFilterControls from '@/components/table/TableFilterControls.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
@@ -14,12 +14,21 @@ import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
 import TableDataGrid from '@/components/table/TableDataGrid.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
 import { TableDisplay } from '@/lib/tableDisplay'
+import { DisplayText } from '@/lib/displayText'
 import { GatheringListStore } from '@/stores/gatheringList'
 
 /** 共用表格控制器（搜尋、篩選、分頁） */
 const gatheringListStore = GatheringListStore.useStore()
-const { page, limit, total, searchInput, searchKeyword, totalPages, queryParams, isErrorDialogOpen } =
-  storeToRefs(gatheringListStore)
+const {
+  page,
+  limit,
+  total,
+  searchInput,
+  searchKeyword,
+  totalPages,
+  queryParams,
+  isErrorDialogOpen,
+} = storeToRefs(gatheringListStore)
 const tableControls = {
   page,
   limit,
@@ -36,7 +45,7 @@ const tableControls = {
 }
 
 /** 活動列表查詢結果 */
-const gatheringsQuery = GatheringsApi.useGatheringsQuery(queryParams)
+const gatheringsQuery = useGatheringsQuery(queryParams)
 watchEffect(() => {
   // 當查詢結果更新時，同步更新分頁器的總筆數
   tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
@@ -88,6 +97,7 @@ const tableColumns = [
   { key: 'deadline', label: text.table.deadline },
   { key: 'participantNumbers', label: text.table.participantNumbers },
   { key: 'price', label: text.table.price },
+  { key: 'actions', label: text.table.actions },
 ]
 
 /** 更新指定篩選欄位的值（狀態 / 類型） */
@@ -104,11 +114,6 @@ function onFilterUpdate(payload: { key: string; value: string }) {
   })
 }
 
-/** 統一處理空值與空白字串，避免表格顯示空白內容 */
-function getDisplayText(value: string | null | undefined, fallbackText = '-') {
-  const text = String(value ?? '').trim()
-  return text === '' ? fallbackText : text
-}
 </script>
 
 <template>
@@ -146,7 +151,7 @@ function getDisplayText(value: string | null | undefined, fallbackText = '-') {
                 <TableCell class="max-w-[220px] text-left!">
                   <div class="flex w-full justify-start">
                     <span class="inline-block max-w-full truncate text-left">
-                      {{ getDisplayText(String(gathering.title ?? '-')) }}
+                      {{ DisplayText.getDisplayText(String(gathering.title ?? '-')) }}
                     </span>
                   </div>
                 </TableCell>
@@ -160,15 +165,25 @@ function getDisplayText(value: string | null | undefined, fallbackText = '-') {
                 <TableCell class="max-w-[220px] text-left!">
                   <div class="flex w-full justify-start">
                     <span class="inline-block max-w-full truncate text-left">
-                      {{ getDisplayText(String(gathering.location ?? '-')) }}
+                      {{ DisplayText.getDisplayText(String(gathering.location ?? '-')) }}
                     </span>
                   </div>
                 </TableCell>
                 <TableCell class="text-center">{{ gathering.startTime }}</TableCell>
                 <TableCell class="text-center">{{ gathering.deadline }}</TableCell>
                 <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
+
                 <!-- 價格維持美元符號前綴顯示 -->
                 <TableCell class="text-center">${{ gathering.price }}</TableCell>
+
+                <!-- 按鈕區域 -->
+                <TableCell class="text-center">
+                  <Button as-child variant="outline" size="sm">
+                    <RouterLink :to="`/admin/gatherings/${gathering.id}`">
+                      {{ text.actions.detail }}
+                    </RouterLink>
+                  </Button>
+                </TableCell>
               </template>
             </TableDataGrid>
 
