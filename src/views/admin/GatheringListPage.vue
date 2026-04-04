@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed, watch, watchEffect } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TableCell } from '@/components/ui/table'
-import { GatheringsListText, useGatheringsQuery, type GatheringItem } from '@/api/gatherings'
+import {
+  GatheringErrorMessages,
+  GatheringsListText,
+  useGatheringsQuery,
+  type GatheringItem,
+} from '@/api/gatherings'
 import TableFilterControls from '@/components/table/TableFilterControls.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
@@ -15,6 +20,7 @@ import TableDataGrid from '@/components/table/TableDataGrid.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
 import { TableDisplay } from '@/lib/tableDisplay'
 import { DisplayText } from '@/lib/displayText'
+import { WatchErrorTransition } from '@/lib/watchErrorTransition'
 import { GatheringListStore } from '@/stores/gatheringList'
 
 /** 共用表格控制器（搜尋、篩選、分頁） */
@@ -51,13 +57,11 @@ watchEffect(() => {
   tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
 })
 
-watch(
+/** 監聽錯誤狀態 */
+WatchErrorTransition.watch(
   () => gatheringsQuery.isError.value,
-  (isError, wasError) => {
-    // 只有在錯誤狀態從 false 變成 true 時才開啟彈窗
-    if (isError && !wasError) {
-      gatheringListStore.openErrorDialog()
-    }
+  () => {
+    gatheringListStore.openErrorDialog()
   },
 )
 
@@ -113,7 +117,6 @@ function onFilterUpdate(payload: { key: string; value: string }) {
     value: payload.value,
   })
 }
-
 </script>
 
 <template>
@@ -203,6 +206,8 @@ function onFilterUpdate(payload: { key: string; value: string }) {
           <AlertDialog
             :open="isErrorDialogOpen"
             variant="error"
+            :title="GatheringErrorMessages.LIST_FETCH_FAILED_TITLE"
+            :description="GatheringErrorMessages.toListFetchErrorMessage(gatheringsQuery.error.value)"
             show-retry
             @update:open="
               (value) => {

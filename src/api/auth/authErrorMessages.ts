@@ -1,4 +1,5 @@
 import { ApiClientError } from '@/api/apiClient'
+import { DisplayText } from '@/lib/displayText'
 
 /** 登入錯誤代碼對應中文 */
 const LOGIN_ERROR_CODE_MAP: Record<string, string> = {
@@ -19,15 +20,6 @@ const REGISTER_ERROR_CODE_MAP: Record<string, string> = {
   INTERNAL_SERVER_ERROR: '伺服器發生錯誤，請稍後再試',
 }
 
-/** 將錯誤代碼標準化，避免大小寫或前後空白造成匹配失敗 */
-function normalizeErrorCode(code?: string): string | undefined {
-  if (!code || typeof code !== 'string') {
-    return undefined
-  }
-
-  return code.trim().toUpperCase()
-}
-
 /** 認證相關錯誤訊息處理 */
 export class AuthErrorMessages {
   /** 登入失敗時預設顯示的通知文字 */
@@ -44,7 +36,7 @@ export class AuthErrorMessages {
 
   /** 登入錯誤：依後端錯誤代碼回傳對應中文訊息 */
   static toLoginErrorMessage(code?: string): string {
-    const normalizedCode = normalizeErrorCode(code)
+    const normalizedCode = DisplayText.normalizeErrorCode(code)
     if (!normalizedCode) {
       return AuthErrorMessages.LOGIN_FAILED_MESSAGE
     }
@@ -54,7 +46,7 @@ export class AuthErrorMessages {
 
   /** 註冊錯誤：依後端錯誤代碼回傳對應中文訊息 */
   static toRegisterErrorMessage(code?: string): string {
-    const normalizedCode = normalizeErrorCode(code)
+    const normalizedCode = DisplayText.normalizeErrorCode(code)
     if (!normalizedCode) {
       return AuthErrorMessages.REGISTER_FAILED_MESSAGE
     }

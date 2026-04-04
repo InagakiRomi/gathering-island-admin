@@ -21,12 +21,10 @@ export function useGatheringsQuery(query: Ref<GetGatheringsQuery>) {
 export function useGatheringByIdQuery(id: Ref<number>) {
   const queryKey = computed(() => QueryKeys.gatherings.detail(id.value))
   const queryFn = () => GatheringsApi.getGatheringById(id.value)
-  const enabled = computed(() => Number.isInteger(id.value) && id.value > 0)
 
   return useQuery({
     queryKey,
     queryFn,
-    enabled,
     staleTime: 1000 * 30,
   })
 }

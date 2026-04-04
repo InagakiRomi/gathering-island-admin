@@ -1,30 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { GatheringsListText, useGatheringByIdQuery } from '@/api/gatherings'
+import {
+  GatheringErrorMessages,
+  GatheringsListText,
+  useGatheringByIdQuery,
+} from '@/api/gatherings'
+import AlertDialog from '@/components/common/AlertDialog.vue'
 import WhiteBgButton from '@/components/common/WhiteBgButton.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
 import SingleInfoCard from '@/components/common/SingleInfoCard.vue'
 import NotebookInfoCard from '@/components/common/NotebookInfoCard.vue'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { DisplayText } from '@/lib/displayText'
 import { TableDisplay } from '@/lib/tableDisplay'
+import { WatchErrorTransition } from '@/lib/watchErrorTransition'
 
 const route = useRoute()
 
 /** 目前活動 ID（來自路由參數） */
 const gatheringId = computed(() => Number(route.params.id))
 
-/** 驗證活動 ID 是否有效 */
-const isValidGatheringId = computed(
-  () => Number.isInteger(gatheringId.value) && gatheringId.value > 0,
-)
-
 /** 活動詳細資料查詢 */
 const gatheringDetailQuery = useGatheringByIdQuery(gatheringId)
+
+/** 錯誤彈窗開關 */
+const isErrorDialogOpen = ref(false)
+/** 錯誤彈窗訊息 */
+const errorDialogMessage = ref('')
+
+/** 監聽錯誤狀態，僅在 false -> true 時觸發 callback */
+WatchErrorTransition.watch(
+  () => gatheringDetailQuery.isError.value,
+  () => {
+    errorDialogMessage.value = GatheringErrorMessages.toDetailFetchErrorMessage(
+      gatheringDetailQuery.error.value,
+    )
+    isErrorDialogOpen.value = true
+  },
+)
 
 /** 活動詳細資料 */
 const gathering = computed(() => gatheringDetailQuery.data.value?.gatheringData ?? null)
@@ -52,7 +68,6 @@ const systemItems = computed(() => {
     { label: '最後更新', value: gathering.value.updatedAt },
   ]
 })
-
 </script>
 
 <template>
@@ -71,34 +86,28 @@ const systemItems = computed(() => {
     <section>
       <Card class="border-slate-200/80 shadow-sm">
         <CardContent class="space-y-6 p-5 sm:p-6">
-          <!-- 例外狀態：路由 ID 無效 -->
-          <Alert v-if="!isValidGatheringId" variant="destructive">
-            <AlertTitle>活動 ID 格式錯誤</AlertTitle>
-            <AlertDescription>請確認網址中的活動 ID 為正整數。</AlertDescription>
-          </Alert>
-
           <!-- 載入狀態 -->
-          <Alert v-else-if="gatheringDetailQuery.isPending.value">
-            <AlertTitle>載入中</AlertTitle>
-            <AlertDescription>正在讀取活動詳細資料，請稍候。</AlertDescription>
-          </Alert>
-
-          <!-- API 錯誤狀態 -->
-          <Alert v-else-if="gatheringDetailQuery.isError.value" variant="destructive">
-            <AlertTitle>讀取失敗</AlertTitle>
-            <AlertDescription>讀取活動詳細資料失敗，請稍後再試。</AlertDescription>
-          </Alert>
+          <div
+            v-if="gatheringDetailQuery.isPending.value"
+            class="py-6 text-center text-muted-foreground"
+          >
+            {{ GatheringsListText.TEXT.states.loading }}
+          </div>
 
           <!-- 正常狀態：顯示活動詳細資料 -->
           <div v-else-if="gathering" class="space-y-6">
             <!-- 活動主資訊（ID、類型、標題、狀態與描述） -->
-            <section class="space-y-4 rounded-xl border bg-muted/20 p-4 sm:p-5">
+            <section
+              class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-muted/20 p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
+            >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
                     <Badge variant="outline">Gathering #{{ gathering.id }}</Badge>
                     <Badge variant="secondary">
-                      {{ TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP) }}
+                      {{
+                        TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP)
+                      }}
                     </Badge>
                   </div>
                   <h2 class="text-2xl font-semibold tracking-tight text-foreground">
@@ -145,6 +154,26 @@ const systemItems = computed(() => {
               />
             </section>
           </div>
+
+          <!-- API 載入失敗時顯示錯誤彈窗，並提供重試 -->
+          <AlertDialog
+            :open="isErrorDialogOpen"
+            variant="error"
+            :title="GatheringErrorMessages.DETAIL_FETCH_FAILED_TITLE"
+            :description="errorDialogMessage"
+            show-retry
+            @update:open="
+              (value) => {
+                isErrorDialogOpen = value
+              }
+            "
+            @retry="
+              () => {
+                isErrorDialogOpen = false
+                gatheringDetailQuery.refetch()
+              }
+            "
+          />
         </CardContent>
       </Card>
     </section>

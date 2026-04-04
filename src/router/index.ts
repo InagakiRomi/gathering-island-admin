@@ -62,6 +62,11 @@ function routeGuard(to: RouteLocationNormalized) {
     return { path: '/login' }
   }
 
+  // 已登入使用者若進入登入頁，強制導向後台主頁
+  if (to.path === '/login' && authStore.isAuthenticated) {
+    return { path: '/admin/dashboard' }
+  }
+
   return true
 }
 
