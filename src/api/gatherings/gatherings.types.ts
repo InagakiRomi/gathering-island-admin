@@ -70,3 +70,17 @@ export interface GetGatheringsResponse {
 export interface GetGatheringByIdResponse {
   gatheringData: GatheringItem
 }
+
+/** 更新活動的請求資料（依後端 UpdateGatheringDto） */
+export interface UpdateGatheringPayload {
+  description?: string
+  location?: string
+  type?: GatheringType
+  deadline?: string
+  tags?: string[]
+}
+
+/** 更新活動的 API 回應結構 */
+export interface UpdateGatheringResponse {
+  gatheringData: GatheringItem
+}

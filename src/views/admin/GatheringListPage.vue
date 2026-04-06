@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
-import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { TableCell } from '@/components/ui/table'
 import {
   GatheringErrorMessages,
@@ -15,11 +13,13 @@ import TableFilterControls from '@/components/table/TableFilterControls.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
 import TableDataGrid from '@/components/table/TableDataGrid.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
 import { TableDisplay } from '@/lib/tableDisplay'
 import { DisplayText } from '@/lib/displayText'
+import { DateTime } from '@/lib/dateTime'
 import { WatchErrorTransition } from '@/lib/watchErrorTransition'
 import { GatheringListStore } from '@/stores/gatheringList'
 
@@ -172,8 +172,12 @@ function onFilterUpdate(payload: { key: string; value: string }) {
                     </span>
                   </div>
                 </TableCell>
-                <TableCell class="text-center">{{ gathering.startTime }}</TableCell>
-                <TableCell class="text-center">{{ gathering.deadline }}</TableCell>
+                <TableCell class="text-center">
+                  {{ DateTime.format(String(gathering.startTime ?? '')) }}
+                </TableCell>
+                <TableCell class="text-center">
+                  {{ DateTime.format(String(gathering.deadline ?? '')) }}
+                </TableCell>
                 <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
 
                 <!-- 價格維持美元符號前綴顯示 -->
@@ -181,11 +185,11 @@ function onFilterUpdate(payload: { key: string; value: string }) {
 
                 <!-- 按鈕區域 -->
                 <TableCell class="text-center">
-                  <Button as-child variant="outline" size="sm">
-                    <RouterLink :to="`/admin/gatherings/${gathering.id}`">
-                      {{ text.actions.detail }}
-                    </RouterLink>
-                  </Button>
+                  <ActionButton
+                    :to="`/admin/gatherings/${gathering.id}`"
+                    :label="text.actions.detail"
+                    size="sm"
+                  />
                 </TableCell>
               </template>
             </TableDataGrid>
@@ -202,13 +206,12 @@ function onFilterUpdate(payload: { key: string; value: string }) {
             />
           </TableFilterControls>
 
-          <!-- API 載入失敗時顯示錯誤彈窗，並提供重試 -->
+          <!-- API 載入失敗時顯示錯誤彈窗 -->
           <AlertDialog
             :open="isErrorDialogOpen"
             variant="error"
             :title="GatheringErrorMessages.LIST_FETCH_FAILED_TITLE"
             :description="GatheringErrorMessages.toListFetchErrorMessage(gatheringsQuery.error.value)"
-            show-retry
             @update:open="
               (value) => {
                 if (value) {
@@ -217,12 +220,6 @@ function onFilterUpdate(payload: { key: string; value: string }) {
                 }
 
                 gatheringListStore.closeErrorDialog()
-              }
-            "
-            @retry="
-              () => {
-                gatheringListStore.closeErrorDialog()
-                gatheringsQuery.refetch()
               }
             "
           />

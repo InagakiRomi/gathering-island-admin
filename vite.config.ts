@@ -16,7 +16,11 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       tailwindcss(),
-      vueDevTools(),
+      vueDevTools({
+        componentInspector: {
+          launchEditor: 'cursor',
+        },
+      }),
     ],
     resolve: {
       alias: {

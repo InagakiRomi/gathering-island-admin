@@ -118,6 +118,5 @@ function handleLogoutErrorDialogOpen(value: boolean) {
     title="登出失敗"
     :description="logoutErrorMessage"
     @update:open="handleLogoutErrorDialogOpen"
-    @retry="handleLogout"
   />
 </template>

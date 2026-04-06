@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -20,14 +19,12 @@ type ToneConfig = {
     title: string
     description: string
     closeText: string
-    retryText: string
   }
   classes: {
     dialog: string
     title: string
     alert: string
     description: string
-    actionButton: string
     cancelButton: string
   }
 }
@@ -39,7 +36,6 @@ const TONE_CONFIG: Record<AlertVariant, ToneConfig> = {
       title: '發生錯誤',
       description: '讀取資料失敗，請稍後再試。',
       closeText: '關閉',
-      retryText: '重新嘗試',
     },
     classes: {
       dialog:
@@ -47,7 +43,6 @@ const TONE_CONFIG: Record<AlertVariant, ToneConfig> = {
       title: 'text-lg font-semibold text-rose-800',
       alert: 'border-rose-200 bg-white/95 text-rose-900',
       description: 'text-slate-700',
-      actionButton: 'border-0 shadow-none bg-rose-600 text-white hover:bg-rose-700',
       cancelButton: 'border-rose-200 bg-white/95 text-rose-800 hover:bg-rose-50',
     },
   },
@@ -56,7 +51,6 @@ const TONE_CONFIG: Record<AlertVariant, ToneConfig> = {
       title: '操作成功',
       description: '操作已完成。',
       closeText: '關閉',
-      retryText: '再試一次',
     },
     classes: {
       dialog:
@@ -64,7 +58,6 @@ const TONE_CONFIG: Record<AlertVariant, ToneConfig> = {
       title: 'text-lg font-semibold text-teal-800',
       alert: 'border-teal-200 bg-white/95 text-slate-700',
       description: 'text-slate-700',
-      actionButton: 'bg-teal-600 text-white hover:bg-teal-700',
       cancelButton: 'border-teal-200 bg-white/95 text-slate-700 hover:bg-teal-50',
     },
   },
@@ -78,16 +71,13 @@ const props = withDefaults(
     title?: string
     description?: string
     closeText?: string
-    retryText?: string
-    showRetry?: boolean
   }>(),
-  { variant: 'error', showRetry: true },
+  { variant: 'error' },
 )
 
 /** 元件的事件 */
 const emit = defineEmits<{
   (event: 'update:open', value: boolean): void
-  (event: 'retry'): void
 }>()
 
 /** 依據狀態取得對應的預設設定 */
@@ -98,8 +88,6 @@ const resolved = computed(() => ({
   title: props.title ?? tone.value.text.title,
   description: props.description ?? tone.value.text.description,
   closeText: props.closeText ?? tone.value.text.closeText,
-  retryText: props.retryText ?? tone.value.text.retryText,
-  showRetry: props.variant === 'error' && props.showRetry,
 }))
 </script>
 
@@ -125,15 +113,6 @@ const resolved = computed(() => ({
 
       <!-- 底部操作按鈕 -->
       <AlertDialogFooter>
-        <!-- 需要時顯示重試按鈕 -->
-        <AlertDialogAction
-          v-if="resolved.showRetry"
-          :class="tone.classes.actionButton"
-          @click="emit('retry')"
-        >
-          {{ resolved.retryText }}
-        </AlertDialogAction>
-
         <!-- 關閉彈窗 -->
         <AlertDialogCancel
           :class="tone.classes.cancelButton"

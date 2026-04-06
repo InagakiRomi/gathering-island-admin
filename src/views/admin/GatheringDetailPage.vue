@@ -1,22 +1,33 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   GatheringErrorMessages,
   GatheringsListText,
   useGatheringByIdQuery,
+  useUpdateGatheringMutation,
+  type GatheringType,
+  type UpdateGatheringPayload,
 } from '@/api/gatherings'
 import AlertDialog from '@/components/common/AlertDialog.vue'
-import WhiteBgButton from '@/components/common/WhiteBgButton.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
+import EditDialog from '@/components/common/EditDialog.vue'
 import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
-import SingleInfoCard from '@/components/common/SingleInfoCard.vue'
 import NotebookInfoCard from '@/components/common/NotebookInfoCard.vue'
+import SingleInfoCard from '@/components/common/SingleInfoCard.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { DateTime } from '@/lib/dateTime'
 import { DisplayText } from '@/lib/displayText'
+import { NormalizeStringArray } from '@/lib/normalizeStringArray'
 import { TableDisplay } from '@/lib/tableDisplay'
 import { WatchErrorTransition } from '@/lib/watchErrorTransition'
+import type {
+  EditDialogField,
+  EditDialogFormValue,
+  EditDialogValidationError,
+} from '@/types/editDialog'
 
 const route = useRoute()
 
@@ -26,24 +37,52 @@ const gatheringId = computed(() => Number(route.params.id))
 /** 活動詳細資料查詢 */
 const gatheringDetailQuery = useGatheringByIdQuery(gatheringId)
 
-/** 錯誤彈窗開關 */
-const isErrorDialogOpen = ref(false)
-/** 錯誤彈窗訊息 */
-const errorDialogMessage = ref('')
-
-/** 監聽錯誤狀態，僅在 false -> true 時觸發 callback */
-WatchErrorTransition.watch(
-  () => gatheringDetailQuery.isError.value,
-  () => {
-    errorDialogMessage.value = GatheringErrorMessages.toDetailFetchErrorMessage(
-      gatheringDetailQuery.error.value,
-    )
-    isErrorDialogOpen.value = true
-  },
-)
+/** 活動更新 mutation */
+const updateGatheringMutation = useUpdateGatheringMutation()
 
 /** 活動詳細資料 */
 const gathering = computed(() => gatheringDetailQuery.data.value?.gatheringData ?? null)
+
+/** 錯誤彈窗開關 */
+const isErrorDialogOpen = ref(false)
+
+/** 錯誤彈窗訊息 */
+const errorDialogMessage = ref('')
+
+/** 編輯彈窗開關 */
+const isEditDialogOpen = ref(false)
+
+/** 更新失敗彈窗開關 */
+const isUpdateErrorDialogOpen = ref(false)
+
+/** 更新錯誤彈窗標題 */
+const updateErrorDialogTitle = ref(GatheringErrorMessages.UPDATE_FAILED_TITLE)
+
+/** 更新失敗彈窗訊息 */
+const updateErrorDialogMessage = ref('')
+
+/** 編輯表單資料 */
+const editForm = reactive<{
+  description: string
+  location: string
+  type: GatheringType
+  deadline: string
+  tags: string[]
+}>({
+  description: '',
+  location: '',
+  type: 'OTHER',
+  deadline: '',
+  tags: [],
+})
+
+/** 活動類型選項（編輯彈窗） */
+const gatheringTypeOptions = computed(() =>
+  Object.entries(GatheringsListText.TYPE_TEXT_MAP).map(([value, label]) => ({
+    value,
+    label,
+  })),
+)
 
 /** 時間資訊卡欄位 */
 const scheduleItems = computed(() => {
@@ -52,8 +91,8 @@ const scheduleItems = computed(() => {
   }
 
   return [
-    { label: '活動開始', value: gathering.value.startTime },
-    { label: '報名截止', value: gathering.value.deadline },
+    { label: '活動開始', value: DateTime.format(gathering.value.startTime) },
+    { label: '報名截止', value: DateTime.format(gathering.value.deadline) },
   ]
 })
 
@@ -64,28 +103,145 @@ const systemItems = computed(() => {
   }
 
   return [
-    { label: '建立時間', value: gathering.value.createdAt },
-    { label: '最後更新', value: gathering.value.updatedAt },
+    { label: '建立時間', value: DateTime.format(gathering.value.createdAt) },
+    { label: '最後更新', value: DateTime.format(gathering.value.updatedAt) },
   ]
 })
+
+/** 活動標籤（顯示用） */
+const gatheringTags = computed(() => NormalizeStringArray.toStringArray(gathering.value?.tags ?? []))
+
+/** 編輯欄位設定（可重用於不同編輯頁） */
+const editDialogFields = computed<EditDialogField[]>(() => [
+  { key: 'description', label: '活動描述', type: 'text' as const, required: true },
+  { key: 'location', label: '活動地點', type: 'text' as const, required: true },
+  {
+    key: 'type',
+    label: '活動類型',
+    type: 'select' as const,
+    options: gatheringTypeOptions.value,
+  },
+  {
+    key: 'deadline',
+    label: '報名截止時間',
+    type: 'datetime-local' as const,
+    required: true,
+  },
+  {
+    key: 'tags',
+    label: '標籤',
+    type: 'text' as const,
+    valueType: 'array' as const,
+    placeholder: '輸入標籤後按 Enter 新增（例如：桌遊）',
+  },
+])
+
+/** 錯誤訊息監聽器 */
+WatchErrorTransition.watch(
+  // 監聽活動詳細資料查詢錯誤狀態
+  () => gatheringDetailQuery.isError.value,
+  () => {
+    // 獲取錯誤訊息
+    errorDialogMessage.value = GatheringErrorMessages.toDetailFetchErrorMessage(
+      gatheringDetailQuery.error.value,
+    )
+    isErrorDialogOpen.value = true
+  },
+)
+
+/** 開啟編輯彈窗並帶入目前資料 */
+function openEditDialog() {
+  if (!gathering.value) {
+    return
+  }
+
+  // 設定編輯表單資料
+  editForm.description = gathering.value.description ?? ''
+  editForm.location = gathering.value.location ?? ''
+  editForm.type = gathering.value.type ?? 'OTHER'
+  editForm.deadline = DateTime.format(gathering.value.deadline ?? '', 'input')
+  editForm.tags = Array.isArray(gathering.value.tags) ? gathering.value.tags : []
+  isEditDialogOpen.value = true
+}
+
+/** 將表單值轉成後端 payload 格式 */
+function toUpdateGatheringPayload(
+  formValues: Record<string, EditDialogFormValue>,
+): UpdateGatheringPayload {
+  const description = typeof formValues.description === 'string' ? formValues.description : ''
+  const location = typeof formValues.location === 'string' ? formValues.location : ''
+  const type = typeof formValues.type === 'string' ? formValues.type : 'OTHER'
+  const deadline = typeof formValues.deadline === 'string' ? formValues.deadline : ''
+
+  return {
+    description: description.trim(),
+    location: location.trim(),
+    type: type as GatheringType,
+    deadline: deadline ? DateTime.format(deadline, 'api') : undefined,
+    tags: NormalizeStringArray.toStringArray(formValues.tags ?? []),
+  }
+}
+
+/** 編輯彈窗必填驗證失敗時顯示提示 */
+function handleEditDialogValidationError(error: EditDialogValidationError) {
+  updateErrorDialogTitle.value = error.title
+  updateErrorDialogMessage.value = error.description
+  isUpdateErrorDialogOpen.value = true
+}
+
+/** 送出更新活動 */
+function submitEditForm(formValues: Record<string, EditDialogFormValue>) {
+  // 如果活動詳細資料不存在，則返回
+  if (!gathering.value) {
+    return
+  }
+  // 將表單值轉成後端 UpdateGatheringDto payload
+  const payload = toUpdateGatheringPayload(formValues)
+
+  // 更新活動
+  updateGatheringMutation.mutate(
+    {
+      id: gathering.value.id,
+      payload,
+    },
+    {
+      // 成功時
+      onSuccess: () => {
+        isEditDialogOpen.value = false
+        gatheringDetailQuery.refetch()
+      },
+      // 失敗時
+      onError: (error) => {
+        updateErrorDialogTitle.value = GatheringErrorMessages.UPDATE_FAILED_TITLE
+        updateErrorDialogMessage.value = GatheringErrorMessages.toUpdateErrorMessage(error)
+        isUpdateErrorDialogOpen.value = true
+      },
+    },
+  )
+}
 </script>
 
 <template>
   <main class="detail-page space-y-6">
-    <!-- 頁面標題區 -->
-    <section>
-      <CardSectionTitle title="活動詳細" subtitle="查看單一活動資訊與目前狀態" />
-    </section>
-
-    <!-- 返回列表按鈕 -->
-    <section class="flex justify-end">
-      <WhiteBgButton to="/admin/gatherings" label="返回按鈕" />
-    </section>
-
     <!-- 主要內容容器 -->
     <section>
       <Card class="border-slate-200/80 shadow-sm">
         <CardContent class="space-y-6 p-5 sm:p-6">
+          <!-- 頁面標題區 -->
+          <section>
+            <CardSectionTitle title="活動詳細" subtitle="查看單一活動資訊與目前狀態" />
+          </section>
+
+          <!-- 操作按鈕 -->
+          <section class="flex justify-end gap-2">
+            <ActionButton
+              label="編輯活動"
+              :disabled="!gathering || gatheringDetailQuery.isPending.value"
+              @click="openEditDialog"
+            />
+            <ActionButton to="/admin/gatherings" label="返回列表" />
+          </section>
+
           <!-- 載入狀態 -->
           <div
             v-if="gatheringDetailQuery.isPending.value"
@@ -100,26 +256,53 @@ const systemItems = computed(() => {
             <section
               class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-muted/20 p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
             >
+              <!-- 活動主資訊（ID、類型、標題、狀態與描述） -->
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">Gathering #{{ gathering.id }}</Badge>
-                    <Badge variant="secondary">
+                    <!-- 活動 ID -->
+                    <Badge variant="outline" class="text-sm">Gathering #{{ gathering.id }}</Badge>
+                    <!-- 活動類型 -->
+                    <Badge variant="secondary" class="text-sm">
                       {{
                         TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP)
                       }}
                     </Badge>
                   </div>
+                  <!-- 活動標題 -->
                   <h2 class="text-2xl font-semibold tracking-tight text-foreground">
                     {{ DisplayText.getDisplayText(gathering.title) }}
                   </h2>
                 </div>
-                <GatheringStatusBadge :status="gathering.status" />
+                <!-- 活動狀態 -->
+                <GatheringStatusBadge :status="gathering.status" class="text-sm" />
               </div>
 
+              <!-- 活動描述 -->
               <p class="text-base leading-relaxed text-muted-foreground">
                 {{ DisplayText.getDisplayText(gathering.description, '尚未提供活動描述') }}
               </p>
+
+              <!-- 活動標籤 -->
+              <div class="space-y-2">
+                <p class="text-sm font-medium text-foreground">活動標籤</p>
+                <div class="flex flex-wrap gap-2">
+                  <Badge
+                    v-for="tag in gatheringTags"
+                    :key="tag"
+                    variant="outline"
+                    class="text-xs text-foreground"
+                  >
+                    #{{ tag }}
+                  </Badge>
+                  <span
+                    v-if="gatheringTags.length === 0"
+                    class="text-sm text-muted-foreground"
+                  >
+                    無標籤
+                  </span>
+                </div>
+              </div>
             </section>
 
             <!-- 活動重點數值卡 -->
@@ -155,27 +338,35 @@ const systemItems = computed(() => {
             </section>
           </div>
 
-          <!-- API 載入失敗時顯示錯誤彈窗，並提供重試 -->
+          <!-- API 載入失敗時顯示錯誤彈窗 -->
           <AlertDialog
-            :open="isErrorDialogOpen"
+            v-model:open="isErrorDialogOpen"
             variant="error"
             :title="GatheringErrorMessages.DETAIL_FETCH_FAILED_TITLE"
             :description="errorDialogMessage"
-            show-retry
-            @update:open="
-              (value) => {
-                isErrorDialogOpen = value
-              }
-            "
-            @retry="
-              () => {
-                isErrorDialogOpen = false
-                gatheringDetailQuery.refetch()
-              }
-            "
+          />
+
+          <!-- 更新失敗時顯示錯誤彈窗 -->
+          <AlertDialog
+            v-model:open="isUpdateErrorDialogOpen"
+            variant="error"
+            :title="updateErrorDialogTitle"
+            :description="updateErrorDialogMessage"
           />
         </CardContent>
       </Card>
     </section>
+
+    <!-- 編輯對話框 -->
+    <EditDialog
+      v-model:open="isEditDialogOpen"
+      title="編輯活動"
+      subtitle="依後端規格可修改描述、地點、類型、截止時間與標籤"
+      :fields="editDialogFields"
+      :form="editForm"
+      :is-submitting="updateGatheringMutation.isPending.value"
+      @validation-error="handleEditDialogValidationError"
+      @submit="submitEditForm"
+    />
   </main>
 </template>

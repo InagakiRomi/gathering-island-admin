@@ -3,6 +3,8 @@ import type {
   GetGatheringByIdResponse,
   GetGatheringsQuery,
   GetGatheringsResponse,
+  UpdateGatheringPayload,
+  UpdateGatheringResponse,
 } from './gatherings.types'
 
 /** 活動相關 API 操作 */
@@ -18,6 +20,18 @@ export class GatheringsApi {
   /** 取得單一活動資料 /gatherings/:id */
   static async getGatheringById(id: number): Promise<GetGatheringByIdResponse> {
     const { data } = await ApiClient.instance.get<GetGatheringByIdResponse>(`/gatherings/${id}`)
+    return data
+  }
+
+  /** 更新單一活動資料 /gatherings/:id */
+  static async updateGathering(
+    id: number,
+    payload: UpdateGatheringPayload,
+  ): Promise<UpdateGatheringResponse> {
+    const { data } = await ApiClient.instance.patch<UpdateGatheringResponse>(
+      `/gatherings/${id}`,
+      payload,
+    )
     return data
   }
 }
