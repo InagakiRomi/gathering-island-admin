@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
-import { X } from 'lucide-vue-next'
+import { FilePenLine, X } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import ActionButton from '@/components/common/ActionButton.vue'
 import { Input } from '@/components/ui/input'
@@ -238,25 +238,39 @@ function handleSubmit() {
   <!-- 全螢幕遮罩 + 置中容器 -->
   <section
     v-if="props.open"
-    class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/45 px-4 py-4 sm:py-6"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50 px-4 py-4 backdrop-blur-[2px] sm:py-6"
   >
     <!-- 文章容器 -->
     <article class="mx-auto my-0 w-full max-w-2xl">
       <form
-        class="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-background shadow-xl dark:border-blue-800/80 sm:max-h-[calc(100dvh-3rem)]"
+        class="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-background shadow-2xl ring-1 ring-slate-200/50 dark:border-blue-800/80 dark:ring-blue-800/40 sm:max-h-[calc(100dvh-3rem)]"
         @submit.prevent="handleSubmit"
       >
         <!-- 標題區：固定於上方，提供操作上下文 -->
-        <header class="space-y-1 border-b bg-background px-5 py-4 sm:px-6">
-          <h3 class="text-lg font-semibold dark:text-blue-50">{{ props.title }}</h3>
-          <p v-if="props.subtitle" class="text-sm text-muted-foreground dark:text-blue-100/85">
-            {{ props.subtitle }}
-          </p>
+        <header
+          class="space-y-3 border-b border-slate-200/80 bg-linear-to-r from-sky-50/95 via-white to-cyan-50/75 px-5 py-4 dark:border-blue-800/80 dark:from-slate-950 dark:via-blue-950/80 dark:to-slate-950 sm:px-6"
+        >
+          <div class="flex items-start gap-3">
+            <div
+              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/60 bg-cyan-100/70 text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-500/20 dark:text-cyan-200"
+            >
+              <FilePenLine class="h-4 w-4" />
+            </div>
+
+            <div class="min-w-0 space-y-1">
+              <h3 class="text-lg leading-tight font-semibold tracking-tight text-slate-900 dark:text-blue-50">
+                {{ props.title }}
+              </h3>
+              <p v-if="props.subtitle" class="text-sm text-slate-600 dark:text-blue-100/85">
+                {{ props.subtitle }}
+              </p>
+            </div>
+          </div>
         </header>
 
         <!-- 內容區 -->
         <section
-          class="space-y-4 overflow-y-auto bg-white px-5 py-4 dark:bg-blue-950 dark:text-blue-50 sm:px-6"
+          class="space-y-4 overflow-y-auto bg-white/95 px-5 py-4 dark:bg-blue-950 dark:text-blue-50 sm:px-6"
         >
           <!-- 依欄位設定動態產生表單列。 -->
           <div v-for="field in props.fields" :key="field.key" class="space-y-1.5">
@@ -335,7 +349,9 @@ function handleSubmit() {
         </section>
 
         <!-- 按鈕區 -->
-        <footer class="flex justify-end gap-2 border-t bg-background px-5 py-4 sm:px-6">
+        <footer
+          class="flex justify-end gap-2 border-t border-slate-200/80 bg-background/95 px-5 py-4 backdrop-blur supports-backdrop-filter:bg-background/80 dark:border-blue-800/80 dark:bg-blue-950/70 sm:px-6"
+        >
           <!-- 取消按鈕 -->
           <ActionButton label="取消" type="button" @click="closeDialog" />
           <!-- 提交按鈕 -->

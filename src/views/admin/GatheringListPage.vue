@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { TableCell } from '@/components/ui/table'
@@ -8,6 +8,8 @@ import {
   GatheringsListText,
   useGatheringsQuery,
   type GatheringItem,
+  type GatheringSortBy,
+  type GatheringSortOrder,
 } from '@/api/gatherings'
 import TableFilterControls from '@/components/table/TableFilterControls.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
@@ -50,29 +52,55 @@ const tableControls = {
   setPage: gatheringListStore.setPage,
 }
 
-/** 活動列表查詢結果 */
-const gatheringsQuery = useGatheringsQuery(queryParams)
-watchEffect(() => {
-  // 當查詢結果更新時，同步更新分頁器的總筆數
-  tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
-})
+/** 列表排序欄位 */
+const sortBy = ref<string>('createdAt')
+/** 列表排序方向 */
+const sortOrder = ref<GatheringSortOrder>('DESC')
+/** 頁面文案 */
+const text = GatheringsListText.TEXT
 
-/** 監聽錯誤狀態 */
-WatchErrorTransition.watch(
-  () => gatheringsQuery.isError.value,
-  () => {
-    gatheringListStore.openErrorDialog()
-  },
-)
+/** 判斷是否為後端可排序欄位 */
+function isServerSortBy(value: string): value is GatheringSortBy {
+  return [
+    'participantNumbers',
+    'price',
+    'status',
+    'type',
+    'startTime',
+    'deadline',
+    'createdAt',
+  ].includes(value)
+}
 
-/** 目前頁面要顯示的活動資料 */
+/** 列表表頭欄位 */
+const tableColumns = [
+  { key: 'id', label: text.table.id, sortable: true },
+  { key: 'title', label: text.table.title, sortable: true },
+  { key: 'type', label: text.table.type, sortable: true },
+  { key: 'status', label: text.table.status, sortable: true },
+  { key: 'location', label: text.table.location, sortable: true },
+  { key: 'startTime', label: text.table.startTime, sortable: true },
+  { key: 'deadline', label: text.table.deadline, sortable: true },
+  { key: 'participantNumbers', label: text.table.participantNumbers, sortable: true },
+  { key: 'price', label: text.table.price, sortable: true },
+  { key: 'actions', label: text.table.actions, sortable: false },
+]
+
+/** 列表查詢參數 */
+const gatheringQueryParams = computed(() => ({
+  ...queryParams.value,
+  sortBy: isServerSortBy(sortBy.value) ? sortBy.value : 'createdAt',
+  sortOrder: isServerSortBy(sortBy.value) ? sortOrder.value : 'DESC',
+}))
+
+/** 活動列表查詢 */
+const gatheringsQuery = useGatheringsQuery(gatheringQueryParams)
+
+/** 目前頁面要顯示的活動資料（排序由 TableDataGrid + TanStack 處理） */
 const gatheringRows = computed<Record<string, unknown>[]>(() => {
   const items = gatheringsQuery.data.value?.gatheringData ?? []
   return items.map((item: GatheringItem): Record<string, unknown> => ({ ...item }))
 })
-
-/** 頁面文案 */
-const text = GatheringsListText.TEXT
 
 /** 共用表格篩選欄位設定 */
 const filterControls = computed<TableFilterControl[]>(() => [
@@ -90,20 +118,6 @@ const filterControls = computed<TableFilterControl[]>(() => [
   },
 ])
 
-/** 列表表頭欄位 */
-const tableColumns = [
-  { key: 'id', label: text.table.id },
-  { key: 'title', label: text.table.title },
-  { key: 'type', label: text.table.type },
-  { key: 'status', label: text.table.status },
-  { key: 'location', label: text.table.location },
-  { key: 'startTime', label: text.table.startTime },
-  { key: 'deadline', label: text.table.deadline },
-  { key: 'participantNumbers', label: text.table.participantNumbers },
-  { key: 'price', label: text.table.price },
-  { key: 'actions', label: text.table.actions },
-]
-
 /** 更新指定篩選欄位的值（狀態 / 類型） */
 function onFilterUpdate(payload: { key: string; value: string }) {
   const key = payload.key
@@ -117,6 +131,31 @@ function onFilterUpdate(payload: { key: string; value: string }) {
     value: payload.value,
   })
 }
+
+/** 更新列表排序條件 */
+function onSortChange(payload: { sortBy: string; sortOrder: 'ASC' | 'DESC' }) {
+  if (payload.sortBy === 'actions') {
+    return
+  }
+
+  sortBy.value = payload.sortBy
+  sortOrder.value = payload.sortOrder
+
+  tableControls.setPage(1)
+}
+
+watchEffect(() => {
+  // 當查詢結果更新時，同步更新分頁器的總筆數
+  tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
+})
+
+/** 監聽錯誤狀態 */
+WatchErrorTransition.watch(
+  () => gatheringsQuery.isError.value,
+  () => {
+    gatheringListStore.openErrorDialog()
+  },
+)
 </script>
 
 <template>
@@ -147,6 +186,9 @@ function onFilterUpdate(payload: { key: string; value: string }) {
               :is-loading="gatheringsQuery.isPending.value"
               :loading-text="text.states.loading"
               :empty-text="text.states.empty"
+              :sort-by="sortBy"
+              :sort-order="sortOrder"
+              @sort-change="onSortChange"
             >
               <template #row="{ row: gathering }">
                 <!-- 活動資料列：依 tableColumns 順序渲染每一欄 -->
@@ -211,7 +253,9 @@ function onFilterUpdate(payload: { key: string; value: string }) {
             :open="isErrorDialogOpen"
             variant="error"
             :title="GatheringErrorMessages.LIST_FETCH_FAILED_TITLE"
-            :description="GatheringErrorMessages.toListFetchErrorMessage(gatheringsQuery.error.value)"
+            :description="
+              GatheringErrorMessages.toListFetchErrorMessage(gatheringsQuery.error.value)
+            "
             @update:open="
               (value) => {
                 if (value) {
