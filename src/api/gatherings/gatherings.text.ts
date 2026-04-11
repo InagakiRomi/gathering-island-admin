@@ -70,6 +70,7 @@ export class GatheringsListText {
       search: '關鍵字',
       status: '狀態',
       type: '類型',
+      isArchived: '是否刪除',
     },
 
     /** 輸入欄位*/
@@ -132,4 +133,11 @@ export class GatheringsListText {
   static readonly TYPE_OPTIONS = GatheringsText.createTypeOptions(
     GatheringsListText.TEXT.options.all,
   )
+
+  /** 活動刪除狀態篩選選項 */
+  static readonly IS_ARCHIVED_OPTIONS: Array<{ value: '' | 'false' | 'true'; label: string }> = [
+    { value: '', label: GatheringsListText.TEXT.options.all },
+    { value: 'false', label: '未刪除' },
+    { value: 'true', label: '已刪除' },
+  ]
 }

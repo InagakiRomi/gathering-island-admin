@@ -1,10 +1,10 @@
-export { GatheringsApi } from './gatherings.api'
 export { GatheringsGuards } from './gatherings.guards'
-export { useGatheringByIdQuery, useGatheringsQuery } from './gatherings.hooks'
-export { useUpdateGatheringMutation } from './gatherings.mutations'
-export { GatheringsText, GatheringsListText } from './gatherings.text'
+export { GatheringsHooks } from './gatherings.hooks'
+export { GatheringsMutations } from './gatherings.mutations'
+export { GatheringsListText } from './gatherings.text'
 export { GatheringErrorMessages } from './gatheringErrorMessages'
 export type {
+  GatheringActionResponse,
   GatheringItem,
   GatheringSortBy,
   GatheringSortOrder,

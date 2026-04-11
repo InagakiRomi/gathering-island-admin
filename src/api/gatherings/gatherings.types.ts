@@ -56,6 +56,7 @@ export interface GetGatheringsQuery {
   type?: GatheringType
   isArchived?: boolean
   search?: string
+  tags?: string[]
 }
 
 /** 取得活動列表的 API 回應結構 */
@@ -82,5 +83,10 @@ export interface UpdateGatheringPayload {
 
 /** 更新活動的 API 回應結構 */
 export interface UpdateGatheringResponse {
+  gatheringData: GatheringItem
+}
+
+/** 活動操作（刪除/恢復）API 回應結構 */
+export interface GatheringActionResponse {
   gatheringData: GatheringItem
 }

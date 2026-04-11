@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useGatheringsQuery, type GetGatheringsQuery } from '@/api/gatherings'
+import { GatheringsHooks, type GetGatheringsQuery } from '@/api/gatherings'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 /** 儀表板「全部活動數量」查詢 */
-const totalGatheringsQuery = useGatheringsQuery(
+const totalGatheringsQuery = GatheringsHooks.useGatheringsQuery(
   computed<GetGatheringsQuery>(() => ({
     page: 1,
     limit: 1,

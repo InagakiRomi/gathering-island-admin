@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { TableCell } from '@/components/ui/table'
 import {
   GatheringErrorMessages,
+  GatheringsHooks,
   GatheringsListText,
-  useGatheringsQuery,
   type GatheringItem,
   type GatheringSortBy,
   type GatheringSortOrder,
@@ -94,12 +94,34 @@ const gatheringQueryParams = computed(() => ({
 }))
 
 /** 活動列表查詢 */
-const gatheringsQuery = useGatheringsQuery(gatheringQueryParams)
+const gatheringsQuery = GatheringsHooks.useGatheringsQuery(gatheringQueryParams)
 
-/** 目前頁面要顯示的活動資料（排序由 TableDataGrid + TanStack 處理） */
+/** 目前頁面要顯示的活動資料 */
 const gatheringRows = computed<Record<string, unknown>[]>(() => {
   const items = gatheringsQuery.data.value?.gatheringData ?? []
-  return items.map((item: GatheringItem): Record<string, unknown> => ({ ...item }))
+  const { status, type, isArchived } = tableControls.filters
+
+  return items
+    .filter((item) => {
+      if (status && item.status !== status) {
+        return false
+      }
+
+      if (type && item.type !== type) {
+        return false
+      }
+
+      if (isArchived === 'true' && item.isArchived !== true) {
+        return false
+      }
+
+      if (isArchived === 'false' && item.isArchived !== false) {
+        return false
+      }
+
+      return true
+    })
+    .map((item: GatheringItem): Record<string, unknown> => ({ ...item }))
 })
 
 /** 共用表格篩選欄位設定 */
@@ -116,20 +138,29 @@ const filterControls = computed<TableFilterControl[]>(() => [
     value: tableControls.filters.type,
     options: GatheringsListText.TYPE_OPTIONS,
   },
+  {
+    key: 'isArchived',
+    label: text.labels.isArchived,
+    value: tableControls.filters.isArchived,
+    options: GatheringsListText.IS_ARCHIVED_OPTIONS,
+  },
 ])
 
-/** 更新指定篩選欄位的值（狀態 / 類型） */
+/** 更新指定篩選欄位的值（狀態 / 類型 / 是否刪除） */
 function onFilterUpdate(payload: { key: string; value: string }) {
   const key = payload.key
 
-  if (key !== 'status' && key !== 'type') {
+  if (key !== 'status' && key !== 'type' && key !== 'isArchived') {
     return
   }
 
-  TableDisplay.applyTypedFilterUpdate<'status' | 'type'>(tableControls.updateFilterValue, {
-    key,
-    value: payload.value,
-  })
+  TableDisplay.applyTypedFilterUpdate<'status' | 'type' | 'isArchived'>(
+    tableControls.updateFilterValue,
+    {
+      key,
+      value: payload.value,
+    },
+  )
 }
 
 /** 更新列表排序條件 */
