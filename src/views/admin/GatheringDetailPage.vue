@@ -371,23 +371,22 @@ function onDangerActionClick() {
 /** 控制活動操作確認彈窗開關 */
 function handleActionConfirmDialogOpenChange(value: boolean) {
   setActionConfirmDialogOpen(value)
-  if (!value) {
-    selectedAction.value = null
-  }
 }
 
 /** 送出活動操作（刪除 / 恢復） */
 function submitGatheringAction() {
-  if (!gathering.value || !selectedAction.value) {
+  if (!gathering.value) {
     return
   }
 
-  // 先固定當前 action，避免後續非同步回呼讀到被清空的 selectedAction
-  const action = selectedAction.value
+  // 先固定當前 action，避免對話框關閉事件先清空 selectedAction 導致操作中斷
+  const action: GatheringActionType =
+    selectedAction.value ?? (gathering.value.isArchived ? 'restore' : 'delete')
   const mutationPayload = { id: gathering.value.id }
 
   const onSuccess = () => {
     handleActionConfirmDialogOpenChange(false)
+    selectedAction.value = null
   }
 
   const onError = (error: unknown) => {
