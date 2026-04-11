@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   GatheringErrorMessages,
@@ -9,13 +9,15 @@ import {
   type GatheringType,
   type UpdateGatheringPayload,
 } from '@/api/gatherings'
+import ActionButton from '@/components/common/ActionButton.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
+import DangerActionPanel from '@/components/common/DangerActionPanel.vue'
 import EditDialog from '@/components/common/EditDialog.vue'
 import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
 import NotebookInfoCard from '@/components/common/NotebookInfoCard.vue'
 import SingleInfoCard from '@/components/common/SingleInfoCard.vue'
-import ActionButton from '@/components/common/ActionButton.vue'
+import { useEntityDialogs } from '@/composables/useEntityDialogs'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateTime } from '@/lib/dateTime'
@@ -58,31 +60,35 @@ const isGatheringEditable = computed(() => {
   return !gathering.value.isArchived && gathering.value.status === 'OPEN'
 })
 
-/** 錯誤彈窗開關 */
-const isErrorDialogOpen = ref(false)
-
-/** 錯誤彈窗訊息 */
-const errorDialogMessage = ref('')
-
-/** 編輯彈窗開關 */
-const isEditDialogOpen = ref(false)
-
-/** 更新失敗彈窗開關 */
-const isUpdateErrorDialogOpen = ref(false)
-
-/** 更新成功彈窗開關 */
-const isUpdateSuccessDialogOpen = ref(false)
-
-/** 更新錯誤彈窗標題 */
-const updateErrorDialogTitle = ref(GatheringErrorMessages.UPDATE_FAILED_TITLE)
-
-/** 更新失敗彈窗訊息 */
-const updateErrorDialogMessage = ref('')
-
+/** 活動操作類型 */
 type GatheringActionType = 'delete' | 'restore'
 
-/** 操作確認彈窗開關 */
-const isActionConfirmDialogOpen = ref(false)
+/** 集中管理本頁所有 Dialog 開關與訊息 */
+const {
+  isErrorDialogOpen,
+  errorDialogMessage,
+  isEditDialogOpen,
+  isUpdateErrorDialogOpen,
+  isUpdateSuccessDialogOpen,
+  updateErrorDialogTitle,
+  updateErrorDialogMessage,
+  isActionConfirmDialogOpen,
+  openDetailError,
+  openEditDialog: openEditDialogState,
+  closeEditDialog,
+  openUpdateError,
+  openUpdateSuccess,
+  setActionConfirmDialogOpen,
+  resetDialogs,
+} = useEntityDialogs({
+  defaultUpdateErrorTitle: GatheringErrorMessages.UPDATE_FAILED_TITLE,
+  storeId: 'gatheringDetailDialogs',
+})
+
+// 離頁時重置狀態，避免回來時看到上次操作殘留的 Dialog
+onBeforeUnmount(() => {
+  resetDialogs()
+})
 
 /** 目前選取的活動操作 */
 const selectedAction = ref<GatheringActionType | null>(null)
@@ -116,6 +122,14 @@ const isGatheringActionPending = computed(
   () => deleteGatheringMutation.isPending.value || restoreGatheringMutation.isPending.value,
 )
 
+/** 編輯按鈕是否可點擊 */
+const isEditActionDisabled = computed(
+  () =>
+    !isGatheringEditable.value ||
+    gatheringDetailQuery.isPending.value ||
+    isGatheringActionPending.value,
+)
+
 /** 是否符合可刪除條件（僅 OPEN 且未封存） */
 const isGatheringDeletable = computed(() => {
   if (!gathering.value) {
@@ -132,6 +146,46 @@ const undeletableStatusText = computed(() => {
   }
 
   return GatheringsListText.STATUS_TEXT_MAP[gathering.value.status]
+})
+
+/** 危險操作說明文案 */
+const dangerActionDescription = computed(() => {
+  if (!gathering.value) {
+    return '目前沒有可操作的活動資料。'
+  }
+
+  if (gathering.value.isArchived) {
+    return '此活動目前為封存狀態，可於此恢復到可管理狀態。'
+  }
+
+  if (!isGatheringDeletable.value) {
+    return `此活動目前為「${undeletableStatusText.value}」狀態，不能刪除活動。`
+  }
+
+  return '刪除後活動會改為封存狀態，並從一般流程中移除。'
+})
+
+/** 危險操作按鈕文字 */
+const dangerActionLabel = computed(() => (gathering.value?.isArchived ? '恢復刪除' : '刪除活動'))
+
+/** 危險操作按鈕顏色 */
+const dangerActionColor = computed(() => (gathering.value?.isArchived ? 'dangerLight' : 'danger'))
+
+/** 危險操作按鈕是否可點擊 */
+const isDangerActionDisabled = computed(() => {
+  if (!gathering.value) {
+    return true
+  }
+
+  if (gathering.value.isArchived) {
+    return gatheringDetailQuery.isPending.value || isGatheringActionPending.value
+  }
+
+  return (
+    !isGatheringDeletable.value ||
+    gatheringDetailQuery.isPending.value ||
+    isGatheringActionPending.value
+  )
 })
 
 /** 編輯表單資料 */
@@ -216,11 +270,9 @@ WatchErrorTransition.watch(
   // 監聽活動詳細資料查詢錯誤狀態
   () => gatheringDetailQuery.isError.value,
   () => {
-    // 獲取錯誤訊息
-    errorDialogMessage.value = GatheringErrorMessages.toDetailFetchErrorMessage(
-      gatheringDetailQuery.error.value,
+    openDetailError(
+      GatheringErrorMessages.toDetailFetchErrorMessage(gatheringDetailQuery.error.value),
     )
-    isErrorDialogOpen.value = true
   },
 )
 
@@ -230,13 +282,13 @@ function openEditDialog() {
     return
   }
 
-  // 設定編輯表單資料
+  // 由目前資料回填表單，確保編輯視窗開啟時內容與畫面一致
   editForm.description = gathering.value.description ?? ''
   editForm.location = gathering.value.location ?? ''
   editForm.type = gathering.value.type ?? 'OTHER'
   editForm.deadline = DateTime.format(gathering.value.deadline ?? '', 'input')
   editForm.tags = Array.isArray(gathering.value.tags) ? gathering.value.tags : []
-  isEditDialogOpen.value = true
+  openEditDialogState()
 }
 
 /** 將表單值轉成後端 payload 格式 */
@@ -259,9 +311,10 @@ function toUpdateGatheringPayload(
 
 /** 編輯彈窗必填驗證失敗時顯示提示 */
 function handleEditDialogValidationError(error: EditDialogValidationError) {
-  updateErrorDialogTitle.value = error.title
-  updateErrorDialogMessage.value = error.description
-  isUpdateErrorDialogOpen.value = true
+  openUpdateError({
+    title: error.title,
+    message: error.description,
+  })
 }
 
 /** 送出更新活動 */
@@ -282,15 +335,15 @@ function submitEditForm(formValues: Record<string, EditDialogFormValue>) {
     {
       // 成功時
       onSuccess: () => {
-        isEditDialogOpen.value = false
-        isUpdateSuccessDialogOpen.value = true
-        gatheringDetailQuery.refetch()
+        closeEditDialog()
+        openUpdateSuccess()
       },
       // 失敗時
       onError: (error) => {
-        updateErrorDialogTitle.value = GatheringErrorMessages.UPDATE_FAILED_TITLE
-        updateErrorDialogMessage.value = GatheringErrorMessages.toUpdateErrorMessage(error)
-        isUpdateErrorDialogOpen.value = true
+        openUpdateError({
+          title: GatheringErrorMessages.UPDATE_FAILED_TITLE,
+          message: GatheringErrorMessages.toUpdateErrorMessage(error),
+        })
       },
     },
   )
@@ -303,12 +356,24 @@ function openActionConfirmDialog(action: GatheringActionType) {
   }
 
   selectedAction.value = action
-  isActionConfirmDialogOpen.value = true
+  setActionConfirmDialogOpen(true)
+}
+
+/** 點擊危險操作按鈕後開啟對應確認視窗 */
+function onDangerActionClick() {
+  if (!gathering.value) {
+    return
+  }
+
+  openActionConfirmDialog(gathering.value.isArchived ? 'restore' : 'delete')
 }
 
 /** 控制活動操作確認彈窗開關 */
 function handleActionConfirmDialogOpenChange(value: boolean) {
-  isActionConfirmDialogOpen.value = value
+  setActionConfirmDialogOpen(value)
+  if (!value) {
+    selectedAction.value = null
+  }
 }
 
 /** 送出活動操作（刪除 / 恢復） */
@@ -317,26 +382,28 @@ function submitGatheringAction() {
     return
   }
 
+  // 先固定當前 action，避免後續非同步回呼讀到被清空的 selectedAction
   const action = selectedAction.value
   const mutationPayload = { id: gathering.value.id }
 
   const onSuccess = () => {
-    isActionConfirmDialogOpen.value = false
-    selectedAction.value = null
-    gatheringDetailQuery.refetch()
+    handleActionConfirmDialogOpenChange(false)
   }
 
   const onError = (error: unknown) => {
-    updateErrorDialogTitle.value = gatheringActionConfig[action].errorTitle
-    updateErrorDialogMessage.value = GatheringErrorMessages.toUpdateErrorMessage(error)
-    isUpdateErrorDialogOpen.value = true
+    openUpdateError({
+      title: gatheringActionConfig[action].errorTitle,
+      message: GatheringErrorMessages.toUpdateErrorMessage(error),
+    })
   }
 
   if (action === 'delete') {
+    // 軟刪除：由後端將活動標記為封存
     deleteGatheringMutation.mutate(mutationPayload, { onSuccess, onError })
     return
   }
 
+  // 還原封存活動
   restoreGatheringMutation.mutate(mutationPayload, { onSuccess, onError })
 }
 </script>
@@ -356,11 +423,7 @@ function submitGatheringAction() {
           <section class="flex flex-wrap justify-end gap-2">
             <ActionButton
               label="編輯活動"
-              :disabled="
-                !isGatheringEditable ||
-                gatheringDetailQuery.isPending.value ||
-                isGatheringActionPending
-              "
+              :disabled="isEditActionDisabled"
               @click="openEditDialog"
             />
             <ActionButton to="/admin/gatherings" label="返回列表" />
@@ -387,7 +450,6 @@ function submitGatheringAction() {
             <section
               class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-muted/20 p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
             >
-              <!-- 活動主資訊（ID、類型、標題、狀態與描述） -->
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
@@ -466,40 +528,13 @@ function submitGatheringAction() {
             </section>
 
             <!-- 危險操作區塊 -->
-            <section class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="space-y-1">
-                  <p class="font-medium text-destructive">危險操作</p>
-                  <p class="text-muted-foreground">
-                    {{
-                      gathering.isArchived
-                        ? '此活動目前為封存狀態，可於此恢復到可管理狀態。'
-                        : !isGatheringDeletable
-                          ? `此活動目前為「${undeletableStatusText}」狀態，不能刪除活動。`
-                          : '刪除後活動會改為封存狀態，並從一般流程中移除。'
-                    }}
-                  </p>
-                </div>
-                <ActionButton
-                  v-if="!gathering.isArchived"
-                  label="刪除活動"
-                  color="danger"
-                  :disabled="
-                    !isGatheringDeletable ||
-                    gatheringDetailQuery.isPending.value ||
-                    isGatheringActionPending
-                  "
-                  @click="openActionConfirmDialog('delete')"
-                />
-                <ActionButton
-                  v-else
-                  label="恢復刪除"
-                  color="dangerLight"
-                  :disabled="gatheringDetailQuery.isPending.value || isGatheringActionPending"
-                  @click="openActionConfirmDialog('restore')"
-                />
-              </div>
-            </section>
+            <DangerActionPanel
+              :description="dangerActionDescription"
+              :action-label="dangerActionLabel"
+              :action-color="dangerActionColor"
+              :action-disabled="isDangerActionDisabled"
+              @action="onDangerActionClick"
+            />
           </div>
 
           <!-- API 載入失敗時顯示錯誤彈窗 -->

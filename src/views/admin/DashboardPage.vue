@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { GatheringsHooks, type GetGatheringsQuery } from '@/api/gatherings'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import StatCard from '@/components/common/StatCard.vue'
 
 /** 儀表板「全部活動數量」查詢 */
 const totalGatheringsQuery = GatheringsHooks.useGatheringsQuery(
@@ -20,21 +20,12 @@ const totalGatheringsQuery = GatheringsHooks.useGatheringsQuery(
     </section>
 
     <section class="grid grid-cols-1 sm:max-w-sm">
-      <Card>
-        <CardHeader>
-          <CardTitle class="text-sm font-medium text-muted-foreground">全部活動數量</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <!-- 儀表板「全部活動數量」數值顯示 -->
-          <p class="text-3xl font-bold tracking-tight">
-            {{
-              totalGatheringsQuery.isPending.value
-                ? '-'
-                : (totalGatheringsQuery.data.value?.total ?? 0)
-            }}
-          </p>
-        </CardContent>
-      </Card>
+      <!-- 儀表板「全部活動數量」數值顯示 -->
+      <StatCard
+        title="全部活動數量"
+        :value="totalGatheringsQuery.data.value?.total ?? 0"
+        :is-loading="totalGatheringsQuery.isPending.value"
+      />
     </section>
   </main>
 </template>

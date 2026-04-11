@@ -7,7 +7,7 @@ import {
   type ColumnDef,
   type SortingFn,
 } from '@tanstack/vue-table'
-import { Utils } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -166,7 +166,7 @@ function getSortIndicator(column: TableColumn): string {
           v-for="column in props.columns"
           :key="column.key"
           :class="
-            Utils.cn(
+            cn(
               'text-center',
               isSortable(column) && 'cursor-pointer select-none hover:text-teal-900',
               column.class,

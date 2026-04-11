@@ -1,76 +1,57 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue'
-import { storeToRefs } from 'pinia'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { TableCell } from '@/components/ui/table'
+import { computed, watchEffect } from 'vue'
 import {
   GatheringErrorMessages,
+  GatheringsGuards,
   GatheringsHooks,
   GatheringsListText,
   type GatheringItem,
-  type GatheringSortBy,
-  type GatheringSortOrder,
+  type GetGatheringsQuery,
 } from '@/api/gatherings'
-import TableFilterControls from '@/components/table/TableFilterControls.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
-import ActionButton from '@/components/common/ActionButton.vue'
-import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
 import TableDataGrid from '@/components/table/TableDataGrid.vue'
+import TableFilterControls from '@/components/table/TableFilterControls.vue'
+import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
-import { TableDisplay } from '@/lib/tableDisplay'
-import { DisplayText } from '@/lib/displayText'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { TableCell } from '@/components/ui/table'
+import { useListPageController } from '@/composables/useListPageController'
 import { DateTime } from '@/lib/dateTime'
+import { DisplayText } from '@/lib/displayText'
+import { TableDisplay } from '@/lib/tableDisplay'
 import { WatchErrorTransition } from '@/lib/watchErrorTransition'
-import { GatheringListStore } from '@/stores/gatheringList'
+import { SeriesListStoreFactory } from '@/stores/seriesList'
 
-/** 共用表格控制器（搜尋、篩選、分頁） */
-const gatheringListStore = GatheringListStore.useStore()
-const {
-  page,
-  limit,
-  total,
-  searchInput,
-  searchKeyword,
-  totalPages,
-  queryParams,
-  isErrorDialogOpen,
-} = storeToRefs(gatheringListStore)
-const tableControls = {
-  page,
-  limit,
-  total,
-  searchInput,
-  searchKeyword,
-  filters: gatheringListStore.filters,
-  totalPages,
-  onSearch: gatheringListStore.onSearch,
-  updateFilterValue: gatheringListStore.updateFilterValue,
-  updateSearchInput: gatheringListStore.updateSearchInput,
-  setTotal: gatheringListStore.setTotal,
-  setPage: gatheringListStore.setPage,
-}
-
-/** 列表排序欄位 */
-const sortBy = ref<string>('createdAt')
-/** 列表排序方向 */
-const sortOrder = ref<GatheringSortOrder>('DESC')
 /** 頁面文案 */
 const text = GatheringsListText.TEXT
+const filterKeys = ['status', 'type', 'isArchived'] as const
+type GatheringFilterKey = (typeof filterKeys)[number]
 
-/** 判斷是否為後端可排序欄位 */
-function isServerSortBy(value: string): value is GatheringSortBy {
-  return [
-    'participantNumbers',
-    'price',
-    'status',
-    'type',
-    'startTime',
-    'deadline',
-    'createdAt',
-  ].includes(value)
-}
+/** 建立列表 store：負責把畫面條件轉為 API query 參數 */
+const useGatheringListStore = SeriesListStoreFactory.createStore<
+  GatheringFilterKey,
+  GetGatheringsQuery
+>({
+  storeId: 'gatheringList',
+  filterKeys,
+  buildQueryParams: ({ page, limit, searchKeyword, filters }) => ({
+    page,
+    limit,
+    sortBy: 'createdAt',
+    sortOrder: 'DESC',
+    search: searchKeyword || undefined,
+    status: GatheringsGuards.isStatus(filters.status) ? filters.status : undefined,
+    type: GatheringsGuards.isType(filters.type) ? filters.type : undefined,
+    isArchived:
+      filters.isArchived === 'true' ? true : filters.isArchived === 'false' ? false : undefined,
+  }),
+})
+
+/** 共用表格控制器（搜尋、篩選、分頁） */
+const gatheringListStore = useGatheringListStore()
 
 /** 列表表頭欄位 */
 const tableColumns = [
@@ -86,41 +67,53 @@ const tableColumns = [
   { key: 'actions', label: text.table.actions, sortable: false },
 ]
 
-/** 列表查詢參數 */
-const gatheringQueryParams = computed(() => ({
-  ...queryParams.value,
-  sortBy: isServerSortBy(sortBy.value) ? sortBy.value : 'createdAt',
-  sortOrder: isServerSortBy(sortBy.value) ? sortOrder.value : 'DESC',
-}))
+/** 統一管理列表頁常見狀態：搜尋、篩選、排序、分頁與錯誤彈窗 */
+const {
+  tableControls,
+  sortBy,
+  sortOrder,
+  queryParamsWithSort,
+  onFilterUpdate,
+  onSortChange,
+  isErrorDialogOpen,
+} = useListPageController(gatheringListStore, {
+  filterKeys,
+  defaultSortBy: 'createdAt',
+  defaultSortOrder: 'DESC',
+})
 
 /** 活動列表查詢 */
-const gatheringsQuery = GatheringsHooks.useGatheringsQuery(gatheringQueryParams)
+const gatheringsQuery = GatheringsHooks.useGatheringsQuery(queryParamsWithSort)
+
+/** 前端補強篩選：避免後端條件尚未覆蓋時出現不一致資料 */
+function isMatchSelectedFilters(item: GatheringItem): boolean {
+  const { status, type, isArchived } = tableControls.filters
+
+  if (status && item.status !== status) {
+    return false
+  }
+
+  if (type && item.type !== type) {
+    return false
+  }
+
+  if (isArchived === 'true' && item.isArchived !== true) {
+    return false
+  }
+
+  if (isArchived === 'false' && item.isArchived !== false) {
+    return false
+  }
+
+  return true
+}
 
 /** 目前頁面要顯示的活動資料 */
 const gatheringRows = computed<Record<string, unknown>[]>(() => {
   const items = gatheringsQuery.data.value?.gatheringData ?? []
-  const { status, type, isArchived } = tableControls.filters
 
   return items
-    .filter((item) => {
-      if (status && item.status !== status) {
-        return false
-      }
-
-      if (type && item.type !== type) {
-        return false
-      }
-
-      if (isArchived === 'true' && item.isArchived !== true) {
-        return false
-      }
-
-      if (isArchived === 'false' && item.isArchived !== false) {
-        return false
-      }
-
-      return true
-    })
+    .filter((item) => isMatchSelectedFilters(item))
     .map((item: GatheringItem): Record<string, unknown> => ({ ...item }))
 })
 
@@ -146,35 +139,6 @@ const filterControls = computed<TableFilterControl[]>(() => [
   },
 ])
 
-/** 更新指定篩選欄位的值（狀態 / 類型 / 是否刪除） */
-function onFilterUpdate(payload: { key: string; value: string }) {
-  const key = payload.key
-
-  if (key !== 'status' && key !== 'type' && key !== 'isArchived') {
-    return
-  }
-
-  TableDisplay.applyTypedFilterUpdate<'status' | 'type' | 'isArchived'>(
-    tableControls.updateFilterValue,
-    {
-      key,
-      value: payload.value,
-    },
-  )
-}
-
-/** 更新列表排序條件 */
-function onSortChange(payload: { sortBy: string; sortOrder: 'ASC' | 'DESC' }) {
-  if (payload.sortBy === 'actions') {
-    return
-  }
-
-  sortBy.value = payload.sortBy
-  sortOrder.value = payload.sortOrder
-
-  tableControls.setPage(1)
-}
-
 watchEffect(() => {
   // 當查詢結果更新時，同步更新分頁器的總筆數
   tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
@@ -187,6 +151,17 @@ WatchErrorTransition.watch(
     gatheringListStore.openErrorDialog()
   },
 )
+
+/** 錯誤彈窗開關事件 */
+function handleErrorDialogOpenChange(value: boolean) {
+  // 對話框採受控模式，這裡同步 store 狀態與元件事件
+  if (value) {
+    gatheringListStore.openErrorDialog()
+    return
+  }
+
+  gatheringListStore.closeErrorDialog()
+}
 </script>
 
 <template>
@@ -211,6 +186,7 @@ WatchErrorTransition.watch(
             @update:filter="onFilterUpdate"
             @search="tableControls.onSearch"
           >
+            <!-- 表格：顯示活動列表 -->
             <TableDataGrid
               :columns="tableColumns"
               :rows="gatheringRows"
@@ -221,8 +197,8 @@ WatchErrorTransition.watch(
               :sort-order="sortOrder"
               @sort-change="onSortChange"
             >
+              <!-- 活動資料列：依 tableColumns 順序渲染每一欄 -->
               <template #row="{ row: gathering }">
-                <!-- 活動資料列：依 tableColumns 順序渲染每一欄 -->
                 <TableCell class="text-center">{{ gathering.id }}</TableCell>
                 <TableCell class="max-w-[220px] text-left!">
                   <div class="flex w-full justify-start">
@@ -287,16 +263,7 @@ WatchErrorTransition.watch(
             :description="
               GatheringErrorMessages.toListFetchErrorMessage(gatheringsQuery.error.value)
             "
-            @update:open="
-              (value) => {
-                if (value) {
-                  gatheringListStore.openErrorDialog()
-                  return
-                }
-
-                gatheringListStore.closeErrorDialog()
-              }
-            "
+            @update:open="handleErrorDialogOpenChange"
           />
         </CardContent>
       </Card>

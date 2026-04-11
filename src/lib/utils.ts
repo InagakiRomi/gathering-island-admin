@@ -6,11 +6,3 @@ import { twMerge } from 'tailwind-merge'
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
-/** 工具類別 */
-export class Utils {
-  // 保留舊用法相容性：Utils.cn(...)
-  static cn(...inputs: ClassValue[]) {
-    return cn(...inputs)
-  }
-}
