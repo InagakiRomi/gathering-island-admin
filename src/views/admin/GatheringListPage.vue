@@ -2,6 +2,7 @@
 import { computed, watchEffect } from 'vue'
 import {
   GatheringErrorMessages,
+  GatheringsCreateForm,
   GatheringsGuards,
   GatheringsHooks,
   GatheringsListText,
@@ -11,6 +12,7 @@ import {
 import ActionButton from '@/components/common/ActionButton.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
+import EditDialog from '@/components/common/EditDialog.vue'
 import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
 import TableDataGrid from '@/components/table/TableDataGrid.vue'
 import TableFilterControls from '@/components/table/TableFilterControls.vue'
@@ -40,7 +42,7 @@ const useGatheringListStore = SeriesListStoreFactory.createStore<
   buildQueryParams: ({ page, limit, searchKeyword, filters }) => ({
     page,
     limit,
-    sortBy: 'createdAt',
+    sortBy: 'id',
     sortOrder: 'DESC',
     search: searchKeyword || undefined,
     status: GatheringsGuards.isStatus(filters.status) ? filters.status : undefined,
@@ -56,10 +58,10 @@ const gatheringListStore = useGatheringListStore()
 /** 列表表頭欄位 */
 const tableColumns = [
   { key: 'id', label: text.table.id, sortable: true },
-  { key: 'title', label: text.table.title, sortable: true },
+  { key: 'title', label: text.table.title, sortable: false },
   { key: 'type', label: text.table.type, sortable: true },
   { key: 'status', label: text.table.status, sortable: true },
-  { key: 'location', label: text.table.location, sortable: true },
+  { key: 'location', label: text.table.location, sortable: false },
   { key: 'startTime', label: text.table.startTime, sortable: true },
   { key: 'deadline', label: text.table.deadline, sortable: true },
   { key: 'participantNumbers', label: text.table.participantNumbers, sortable: true },
@@ -78,12 +80,29 @@ const {
   isErrorDialogOpen,
 } = useListPageController(gatheringListStore, {
   filterKeys,
-  defaultSortBy: 'createdAt',
+  defaultSortBy: 'id',
   defaultSortOrder: 'DESC',
+  unsortableKeys: ['actions'],
 })
 
 /** 活動列表查詢 */
 const gatheringsQuery = GatheringsHooks.useGatheringsQuery(queryParamsWithSort)
+
+/** 使用新增活動表單 */
+const {
+  createForm,
+  createDialogFields,
+  createErrorDialogMessage,
+  createErrorDialogTitle,
+  createGatheringMutation,
+  handleCreateDialogOpenChange,
+  handleCreateDialogValidationError,
+  isCreateDialogOpen,
+  isCreateErrorDialogOpen,
+  isCreateSuccessDialogOpen,
+  openCreateDialog,
+  submitCreateForm,
+} = GatheringsCreateForm.useCreateGatheringForm()
 
 /** 前端補強篩選：避免後端條件尚未覆蓋時出現不一致資料 */
 function isMatchSelectedFilters(item: GatheringItem): boolean {
@@ -171,7 +190,11 @@ function handleErrorDialogOpenChange(value: boolean) {
       <Card>
         <CardHeader>
           <!-- 頁面標題與副標：抽成共用元件，統一卡片頂部視覺 -->
-          <CardSectionTitle :title="text.title" :subtitle="text.subtitle" />
+          <CardSectionTitle :title="text.title" :subtitle="text.subtitle">
+            <template #actions>
+              <ActionButton color="cyan" :label="text.actions.create" @click="openCreateDialog" />
+            </template>
+          </CardSectionTitle>
         </CardHeader>
 
         <CardContent>
@@ -265,8 +288,38 @@ function handleErrorDialogOpenChange(value: boolean) {
             "
             @update:open="handleErrorDialogOpenChange"
           />
+
+          <!-- 新增活動失敗提示 -->
+          <AlertDialog
+            v-model:open="isCreateErrorDialogOpen"
+            variant="error"
+            :title="createErrorDialogTitle"
+            :description="createErrorDialogMessage"
+          />
+
+          <!-- 新增活動成功提示 -->
+          <AlertDialog
+            v-model:open="isCreateSuccessDialogOpen"
+            variant="success"
+            title="新增成功"
+            description="活動資料已建立完成。"
+          />
         </CardContent>
       </Card>
     </section>
+
+    <!-- 新增活動對話框 -->
+    <EditDialog
+      :open="isCreateDialogOpen"
+      title="新增活動"
+      subtitle="請填寫建立活動所需資訊，送出後會立即建立資料"
+      :fields="createDialogFields"
+      :form="createForm"
+      :is-submitting="createGatheringMutation.isPending.value"
+      :submit-label="{ idle: '建立活動', submitting: '建立中...' }"
+      @update:open="handleCreateDialogOpenChange"
+      @validation-error="handleCreateDialogValidationError"
+      @submit="submitCreateForm"
+    />
   </main>
 </template>

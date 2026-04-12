@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { ArrowLeft } from 'lucide-vue-next'
+import { RouterLink, useRoute } from 'vue-router'
 import {
   GatheringErrorMessages,
   GatheringsHooks,
@@ -19,6 +20,7 @@ import NotebookInfoCard from '@/components/common/NotebookInfoCard.vue'
 import SingleInfoCard from '@/components/common/SingleInfoCard.vue'
 import { useEntityDialogs } from '@/composables/useEntityDialogs'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateTime } from '@/lib/dateTime'
 import { DisplayText } from '@/lib/displayText'
@@ -411,21 +413,25 @@ function submitGatheringAction() {
   <main class="detail-page space-y-6">
     <!-- 主要內容容器 -->
     <section>
-      <Card class="border-slate-200/80 shadow-sm">
+      <Card class="border-slate-200/80 py-3 shadow-sm">
         <CardContent class="space-y-6 p-5 sm:p-6">
+          <!-- 返回按鈕置於卡片左上角 -->
+          <section class="flex justify-start">
+            <Button
+              as-child
+              variant="outline"
+              size="icon"
+              class="cursor-pointer border-sky-300/90 bg-white/90 text-sky-900 shadow-sm hover:border-sky-400 hover:bg-sky-50 dark:border-sky-700 dark:bg-slate-900/80 dark:text-sky-100 dark:hover:bg-sky-950/50"
+            >
+              <RouterLink to="/admin/gatherings" aria-label="返回列表" title="返回列表">
+                <ArrowLeft class="h-4 w-4" />
+              </RouterLink>
+            </Button>
+          </section>
+
           <!-- 頁面標題區 -->
           <section>
             <CardSectionTitle title="活動詳細" subtitle="查看單一活動資訊與目前狀態" />
-          </section>
-
-          <!-- 操作按鈕 -->
-          <section class="flex flex-wrap justify-end gap-2">
-            <ActionButton
-              label="編輯活動"
-              :disabled="isEditActionDisabled"
-              @click="openEditDialog"
-            />
-            <ActionButton to="/admin/gatherings" label="返回列表" />
           </section>
 
           <!-- 載入狀態 -->
@@ -466,8 +472,16 @@ function submitGatheringAction() {
                     {{ DisplayText.getDisplayText(gathering.title) }}
                   </h2>
                 </div>
-                <!-- 活動狀態 -->
-                <GatheringStatusBadge :status="gathering.status" class="text-sm" />
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                  <!-- 活動狀態 -->
+                  <GatheringStatusBadge :status="gathering.status" class="text-sm" />
+                  <ActionButton
+                    label="編輯活動"
+                    color="cyan"
+                    :disabled="isEditActionDisabled"
+                    @click="openEditDialog"
+                  />
+                </div>
               </div>
 
               <!-- 活動描述 -->

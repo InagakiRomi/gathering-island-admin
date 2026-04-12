@@ -2,25 +2,33 @@ import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
 import { DisplayText } from '@/lib/displayText'
 
+type GatheringErrorCodeMap = Record<string, string>
+
 /** 活動列表錯誤代碼對應中文 */
-const GATHERING_LIST_ERROR_CODE_MAP: Record<string, string> = {
-  UNAUTHORIZED: '登入已失效，請重新登入',
+const GATHERING_LIST_ERROR_CODE_MAP: GatheringErrorCodeMap = {
   BAD_REQUEST: '查詢參數錯誤，請調整篩選條件後再試',
+  UNAUTHORIZED: '登入已失效，請重新登入',
 }
 
 /** 活動詳細錯誤代碼對應中文 */
-const GATHERING_DETAIL_ERROR_CODE_MAP: Record<string, string> = {
-  NOT_FOUND: '找不到此活動資料',
-  UNAUTHORIZED: '登入已失效，請重新登入',
+const GATHERING_DETAIL_ERROR_CODE_MAP: GatheringErrorCodeMap = {
   BAD_REQUEST: '活動 ID 格式錯誤，請重新操作',
+  UNAUTHORIZED: '登入已失效，請重新登入',
+  NOT_FOUND: '找不到此活動資料',
+}
+
+/** 活動新增錯誤代碼對應中文 */
+const GATHERING_CREATE_ERROR_CODE_MAP: GatheringErrorCodeMap = {
+  BAD_REQUEST: '新增活動資料格式錯誤，請確認欄位內容後再試',
+  UNAUTHORIZED: '登入已失效，請重新登入',
 }
 
 /** 活動更新錯誤代碼對應中文 */
-const GATHERING_UPDATE_ERROR_CODE_MAP: Record<string, string> = {
-  NOT_FOUND: '找不到此活動資料',
-  FORBIDDEN: '你沒有權限編輯這筆活動',
-  UNAUTHORIZED: '登入已失效，請重新登入',
+const GATHERING_UPDATE_ERROR_CODE_MAP: GatheringErrorCodeMap = {
   BAD_REQUEST: '活動資料格式錯誤，請確認欄位內容後再試',
+  UNAUTHORIZED: '登入已失效，請重新登入',
+  FORBIDDEN: '你沒有權限編輯這筆活動',
+  NOT_FOUND: '找不到此活動資料',
 }
 
 /** 活動頁錯誤訊息處理 */
@@ -31,14 +39,20 @@ export class GatheringErrorMessages {
   /** 活動詳細讀取失敗彈窗標題 */
   static readonly DETAIL_FETCH_FAILED_TITLE = '讀取活動詳細失敗'
 
+  /** 活動新增失敗彈窗標題 */
+  static readonly CREATE_FAILED_TITLE = '新增活動失敗'
+
+  /** 活動更新失敗彈窗標題 */
+  static readonly UPDATE_FAILED_TITLE = '更新活動失敗'
+
   /** 活動列表讀取失敗時預設顯示的通知文字 */
   static readonly LIST_FETCH_FAILED_MESSAGE = '讀取活動列表失敗，請稍後再試'
 
   /** 活動詳細讀取失敗時預設顯示的通知文字 */
   static readonly DETAIL_FETCH_FAILED_MESSAGE = '讀取活動詳細失敗，請稍後再試'
 
-  /** 活動更新失敗彈窗標題 */
-  static readonly UPDATE_FAILED_TITLE = '更新活動失敗'
+  /** 活動新增失敗時預設顯示的通知文字 */
+  static readonly CREATE_FAILED_MESSAGE = '新增活動失敗，請稍後再試'
 
   /** 活動更新失敗時預設顯示的通知文字 */
   static readonly UPDATE_FAILED_MESSAGE = '更新活動失敗，請稍後再試'
@@ -66,6 +80,16 @@ export class GatheringErrorMessages {
     )
   }
 
+  /** 活動新增錯誤：統一處理網路、狀態碼與錯誤代碼訊息 */
+  static toCreateErrorMessage(error: unknown): string {
+    return GatheringErrorMessages.toMappedFetchErrorMessage(
+      error,
+      GATHERING_CREATE_ERROR_CODE_MAP,
+      GatheringErrorMessages.CREATE_FAILED_MESSAGE,
+      GATHERING_CREATE_ERROR_CODE_MAP.BAD_REQUEST,
+    )
+  }
+
   /** 活動更新錯誤：統一處理網路、狀態碼與錯誤代碼訊息 */
   static toUpdateErrorMessage(error: unknown): string {
     return GatheringErrorMessages.toMappedFetchErrorMessage(
@@ -79,7 +103,7 @@ export class GatheringErrorMessages {
   /** 依錯誤碼映射對應訊息，並統一處理網路與未知錯誤 */
   private static toMappedFetchErrorMessage(
     error: unknown,
-    codeMap: Record<string, string>,
+    codeMap: GatheringErrorCodeMap,
     fallbackMessage: string,
     badRequestMessage?: string,
   ): string {

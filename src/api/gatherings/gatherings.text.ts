@@ -81,6 +81,7 @@ export class GatheringsListText {
     /** 操作按鈕 */
     actions: {
       search: '搜尋',
+      create: '新增活動',
       detail: '詳細',
       // 上一頁按鈕
       prevPage: TableText.TEXT.actions.prevPage,

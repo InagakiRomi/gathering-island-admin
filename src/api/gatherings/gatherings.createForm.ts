@@ -1,0 +1,230 @@
+import { computed, reactive, ref } from 'vue'
+import { DateTime } from '@/lib/dateTime'
+import { NormalizeStringArray } from '@/lib/normalizeStringArray'
+import type {
+  EditDialogField,
+  EditDialogFormValue,
+  EditDialogValidationError,
+} from '@/types/editDialog'
+import { GatheringErrorMessages } from './gatheringErrorMessages'
+import { GatheringsMutations } from './gatherings.mutations'
+import { GatheringsListText } from './gatherings.text'
+import type { CreateGatheringPayload, GatheringType } from './gatherings.types'
+
+/** 新增活動彈窗的初始表單狀態 */
+const DEFAULT_FORM = {
+  title: '',
+  description: '',
+  location: '',
+  participantNumbers: '',
+  price: '',
+  type: 'OTHER' as GatheringType,
+  startTime: '',
+  deadline: '',
+  tags: [] as string[],
+}
+
+/** 表單欄位類型 */
+const TEXT_FIELD = 'text' as const
+
+/** 選項欄位類型 */
+const SELECT_FIELD = 'select' as const
+
+/** 日期時間欄位類型 */
+const DATETIME_FIELD = 'datetime-local' as const
+
+/** 欄位格式錯誤彈窗標題 */
+const FIELD_FORMAT_ERROR_TITLE = '欄位格式錯誤'
+
+export class GatheringsCreateForm {
+  /** 使用新增活動表單 */
+  static useCreateGatheringForm() {
+    /** 使用新增活動對話框 */
+    const createGatheringMutation = GatheringsMutations.useCreateGatheringMutation()
+
+    /** 新增活動對話框是否開啟 */
+    const isCreateDialogOpen = ref(false)
+
+    /** 新增活動對話框是否開啟 */
+    const isCreateErrorDialogOpen = ref(false)
+
+    /** 新增活動對話框錯誤訊息標題 */
+    const createErrorDialogTitle = ref(GatheringErrorMessages.CREATE_FAILED_TITLE)
+
+    /** 新增活動對話框錯誤訊息 */
+    const createErrorDialogMessage = ref('')
+
+    /** 新增活動對話框是否成功 */
+    const isCreateSuccessDialogOpen = ref(false)
+
+    /** 新增活動表單狀態 */
+    const createForm = reactive({ ...DEFAULT_FORM })
+
+    /** 將型別映射轉成 EditDialog 可用選項 */
+    const gatheringTypeOptions = computed(() =>
+      Object.entries(GatheringsListText.TYPE_TEXT_MAP).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    )
+
+    /** 新增活動對話框欄位設定 */
+    const createDialogFields = computed<EditDialogField[]>(() => [
+      { key: 'title', label: '活動標題', type: TEXT_FIELD, required: true },
+      { key: 'description', label: '活動描述', type: TEXT_FIELD },
+      { key: 'location', label: '活動地點', type: TEXT_FIELD, required: true },
+      {
+        key: 'participantNumbers',
+        label: '活動名額',
+        type: TEXT_FIELD,
+        required: true,
+        placeholder: '請輸入正整數（例如：20）',
+      },
+      {
+        key: 'price',
+        label: '活動費用',
+        type: TEXT_FIELD,
+        required: true,
+        placeholder: '請輸入數字（例如：300）',
+      },
+      {
+        key: 'type',
+        label: '活動類型',
+        type: SELECT_FIELD,
+        options: gatheringTypeOptions.value,
+      },
+      {
+        key: 'startTime',
+        label: '活動開始時間',
+        type: DATETIME_FIELD,
+        required: true,
+      },
+      {
+        key: 'deadline',
+        label: '報名截止時間',
+        type: DATETIME_FIELD,
+        required: true,
+      },
+      {
+        key: 'tags',
+        label: '標籤',
+        type: TEXT_FIELD,
+        valueType: 'array' as const,
+        placeholder: '輸入標籤後按 Enter 新增（例如：桌遊）',
+      },
+    ])
+
+    /** 重置新增活動表單 */
+    function resetCreateForm() {
+      Object.assign(createForm, DEFAULT_FORM)
+    }
+
+    /** 開啟新增活動對話框 */
+    function openCreateDialog() {
+      resetCreateForm()
+      isCreateDialogOpen.value = true
+    }
+
+    /** 處理新增活動對話框開啟狀態變化 */
+    function handleCreateDialogOpenChange(value: boolean) {
+      isCreateDialogOpen.value = value
+    }
+
+    /** 開啟新增活動對話框錯誤彈窗 */
+    function openCreateErrorDialog(
+      message: string,
+      title = GatheringErrorMessages.CREATE_FAILED_TITLE,
+    ) {
+      createErrorDialogTitle.value = title
+      createErrorDialogMessage.value = message
+      isCreateErrorDialogOpen.value = true
+    }
+
+    /** 將表單值轉成 API payload，並集中處理欄位格式驗證 */
+    function toCreateGatheringPayload(
+      formValues: Record<string, EditDialogFormValue>,
+    ): CreateGatheringPayload | null {
+      const title = String(formValues.title ?? '').trim()
+      const description = String(formValues.description ?? '').trim()
+      const location = String(formValues.location ?? '').trim()
+      const type = String(formValues.type ?? 'OTHER') as GatheringType
+      const participantNumbersRaw = String(formValues.participantNumbers ?? '').trim()
+      const priceRaw = String(formValues.price ?? '').trim()
+      const startTimeRaw = String(formValues.startTime ?? '')
+      const deadlineRaw = String(formValues.deadline ?? '')
+
+      const participantNumbers = Number(participantNumbersRaw)
+      if (!Number.isInteger(participantNumbers) || participantNumbers <= 0) {
+        openCreateErrorDialog('活動名額必須為正整數。', FIELD_FORMAT_ERROR_TITLE)
+        return null
+      }
+
+      const price = Number(priceRaw)
+      if (!Number.isFinite(price) || price < 0) {
+        openCreateErrorDialog('活動費用必須為 0 或更大的數字。', FIELD_FORMAT_ERROR_TITLE)
+        return null
+      }
+
+      const startTime = DateTime.format(startTimeRaw, 'api')
+      const deadline = DateTime.format(deadlineRaw, 'api')
+      if (!startTime || !deadline) {
+        openCreateErrorDialog('請填寫有效的活動開始與報名截止時間。', FIELD_FORMAT_ERROR_TITLE)
+        return null
+      }
+
+      return {
+        title,
+        description: description || undefined,
+        location,
+        participantNumbers,
+        price,
+        type: type as GatheringType,
+        startTime,
+        deadline,
+        tags: NormalizeStringArray.toStringArray(formValues.tags ?? []),
+      }
+    }
+
+    /** 處理新增活動對話框錯誤驗證 */
+    function handleCreateDialogValidationError(error: EditDialogValidationError) {
+      openCreateErrorDialog(error.description, error.title)
+    }
+
+    /** 提交新增活動表單 */
+    function submitCreateForm(formValues: Record<string, EditDialogFormValue>) {
+      const payload = toCreateGatheringPayload(formValues)
+      if (!payload) {
+        return
+      }
+
+      // 成功後關閉表單並顯示成功訊息；失敗時轉成人可讀錯誤訊息
+      createGatheringMutation.mutate(
+        { payload },
+        {
+          onSuccess: () => {
+            isCreateDialogOpen.value = false
+            isCreateSuccessDialogOpen.value = true
+          },
+          onError: (error) => {
+            openCreateErrorDialog(GatheringErrorMessages.toCreateErrorMessage(error))
+          },
+        },
+      )
+    }
+
+    return {
+      createForm,
+      createDialogFields,
+      createErrorDialogMessage,
+      createErrorDialogTitle,
+      createGatheringMutation,
+      handleCreateDialogOpenChange,
+      handleCreateDialogValidationError,
+      isCreateDialogOpen,
+      isCreateErrorDialogOpen,
+      isCreateSuccessDialogOpen,
+      openCreateDialog,
+      submitCreateForm,
+    }
+  }
+}

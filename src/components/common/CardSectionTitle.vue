@@ -16,21 +16,27 @@ defineProps<{
     <!-- 左側強調色條：快速建立資訊層級與識別。 -->
     <div class="absolute inset-y-0 left-0 w-1.5 bg-linear-to-b from-cyan-400 via-sky-500 to-teal-500" />
 
-    <!-- 內容列：含裝飾圓點與標題文字群。 -->
-    <div class="relative flex items-start gap-3 pl-2 sm:pl-3">
-      <span
-        aria-hidden="true"
-        class="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-200/70"
-      />
+    <!-- 內容列：左側標題資訊 + 右側可選 actions。 -->
+    <div class="relative flex flex-col gap-3 pl-2 sm:pl-3 sm:flex-row sm:items-start sm:justify-between">
+      <div class="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          class="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-cyan-500 ring-4 ring-cyan-200/70"
+        />
 
-      <!-- 文字區：主標題 + 說明副標。 -->
-      <div class="min-w-0">
-        <CardTitle class="text-lg font-semibold tracking-tight text-slate-800 sm:text-xl">
-          {{ title }}
-        </CardTitle>
-        <CardDescription class="mt-1 text-sm leading-relaxed text-slate-600">
-          {{ subtitle }}
-        </CardDescription>
+        <!-- 文字區：主標題 + 說明副標。 -->
+        <div class="min-w-0">
+          <CardTitle class="text-lg font-semibold tracking-tight text-slate-800 sm:text-xl">
+            {{ title }}
+          </CardTitle>
+          <CardDescription class="mt-1 text-sm leading-relaxed text-slate-600">
+            {{ subtitle }}
+          </CardDescription>
+        </div>
+      </div>
+
+      <div v-if="$slots.actions" class="mt-1 sm:mt-2 sm:ml-4">
+        <slot name="actions" />
       </div>
     </div>
   </div>

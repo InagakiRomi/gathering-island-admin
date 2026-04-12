@@ -2,10 +2,16 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { QueryKeys } from '../queryKeys'
 import { GatheringsApi } from './gatherings.api'
 import type {
+  CreateGatheringPayload,
   GatheringItem,
   GetGatheringsResponse,
   UpdateGatheringPayload,
 } from './gatherings.types'
+
+/** 新增活動 mutation 輸入 */
+type CreateGatheringMutationInput = {
+  payload: CreateGatheringPayload
+}
 
 /** 更新活動 mutation 輸入 */
 type UpdateGatheringMutationInput = {
@@ -45,6 +51,20 @@ export class GatheringsMutations {
         }
       },
     )
+  }
+
+  /** 提供新增活動 mutation */
+  static useCreateGatheringMutation() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+      mutationKey: ['gatherings', 'create'] as const,
+      mutationFn: ({ payload }: CreateGatheringMutationInput) => GatheringsApi.createGathering(payload),
+      onSuccess(response) {
+        GatheringsMutations.updateGatheringCaches(queryClient, response.gatheringData)
+        void queryClient.invalidateQueries({ queryKey: QueryKeys.gatherings.all })
+      },
+    })
   }
 
   /** 提供更新活動 mutation */

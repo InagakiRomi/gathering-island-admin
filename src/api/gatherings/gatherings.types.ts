@@ -15,6 +15,7 @@ export type GatheringType =
 
 /** 活動排序欄位 */
 export type GatheringSortBy =
+  | 'id'
   | 'participantNumbers'
   | 'price'
   | 'status'
@@ -69,6 +70,24 @@ export interface GetGatheringsResponse {
 
 /** 取得單一活動的 API 回應結構 */
 export interface GetGatheringByIdResponse {
+  gatheringData: GatheringItem
+}
+
+/** 新增活動的請求資料（依後端 CreateGatheringDto） */
+export interface CreateGatheringPayload {
+  title: string
+  description?: string
+  location: string
+  participantNumbers: number
+  price: number
+  type: GatheringType
+  startTime: string
+  deadline: string
+  tags?: string[]
+}
+
+/** 新增活動的 API 回應結構 */
+export interface CreateGatheringResponse {
   gatheringData: GatheringItem
 }
 

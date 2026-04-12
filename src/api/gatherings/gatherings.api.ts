@@ -1,11 +1,13 @@
 import { ApiClient } from '../apiClient'
 import type {
-  GatheringActionResponse,
-  GetGatheringByIdResponse,
   GetGatheringsQuery,
   GetGatheringsResponse,
+  GetGatheringByIdResponse,
+  CreateGatheringPayload,
+  CreateGatheringResponse,
   UpdateGatheringPayload,
   UpdateGatheringResponse,
+  GatheringActionResponse,
 } from './gatherings.types'
 
 /** 活動相關 API 操作 */
@@ -56,6 +58,12 @@ export class GatheringsApi {
   /** 取得單一活動資料 /gatherings/:id */
   static async getGatheringById(id: number): Promise<GetGatheringByIdResponse> {
     const { data } = await ApiClient.instance.get<GetGatheringByIdResponse>(`/gatherings/${id}`)
+    return data
+  }
+
+  /** 新增活動 /gatherings */
+  static async createGathering(payload: CreateGatheringPayload): Promise<CreateGatheringResponse> {
+    const { data } = await ApiClient.instance.post<CreateGatheringResponse>('/gatherings', payload)
     return data
   }
 
