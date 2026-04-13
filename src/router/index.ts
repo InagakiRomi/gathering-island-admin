@@ -44,6 +44,11 @@ const router = createRouter({
           name: 'admin-gathering-detail',
           component: () => import('@/views/admin/GatheringDetailPage.vue'),
         },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('@/views/admin/UserListPage.vue'),
+        },
       ],
     },
   ],

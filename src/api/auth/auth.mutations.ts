@@ -38,6 +38,7 @@ export function useAuthLogoutMutation() {
       authStore.clearAccessToken()
       void queryClient.cancelQueries()
       queryClient.removeQueries({ queryKey: QueryKeys.gatherings.all })
+      queryClient.removeQueries({ queryKey: QueryKeys.users.all })
       queryClient.removeQueries({ queryKey: QueryKeys.auth.all })
     },
   })
