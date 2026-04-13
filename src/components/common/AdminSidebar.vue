@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute, RouterLink } from 'vue-router'
-import { faCampground, faHouse, faUsers } from '@fortawesome/free-solid-svg-icons'
+import { faCampground, faHouse, faTag, faUsers } from '@fortawesome/free-solid-svg-icons'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,7 @@ const navigationItems = [
   { label: '儀錶板', to: '/admin/dashboard', icon: faHouse },
   { label: '活動列表', to: '/admin/gatherings', icon: faCampground },
   { label: '用戶列表', to: '/admin/users', icon: faUsers },
+  { label: '標籤列表', to: '/admin/tags', icon: faTag },
 ]
 
 /** 判斷目前路由是否落在指定路徑 */

@@ -49,6 +49,11 @@ const router = createRouter({
           name: 'admin-users',
           component: () => import('@/views/admin/UserListPage.vue'),
         },
+        {
+          path: 'tags',
+          name: 'admin-tags',
+          component: () => import('@/views/admin/TagListPage.vue'),
+        },
       ],
     },
   ],

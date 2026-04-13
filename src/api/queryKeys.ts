@@ -1,4 +1,5 @@
 import type { GetGatheringsQuery } from './gatherings/gatherings.types'
+import type { GetTagsQuery } from './tags/tags.types'
 import type { GetUsersQuery } from './users/users.types'
 
 /** TanStack Query keys */
@@ -22,5 +23,11 @@ export class QueryKeys {
     list: (query: GetUsersQuery) => ['users', 'list', query] as const,
     listAll: () => ['users', 'list-all'] as const,
     detail: (id: number) => ['users', 'detail', id] as const,
+  }
+
+  static readonly tags = {
+    all: ['tags'] as const,
+    list: (query: GetTagsQuery) => ['tags', 'list', query] as const,
+    listAll: () => ['tags', 'list-all'] as const,
   }
 }
