@@ -20,5 +20,6 @@ export class QueryKeys {
     all: ['users'] as const,
     list: (query: GetUsersQuery) => ['users', 'list', query] as const,
     listAll: () => ['users', 'list-all'] as const,
+    detail: (id: number) => ['users', 'detail', id] as const,
   }
 }

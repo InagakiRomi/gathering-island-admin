@@ -10,6 +10,7 @@ import {
   type GatheringType,
   type UpdateGatheringPayload,
 } from '@/api/gatherings'
+import { UsersHooks } from '@/api/users'
 import ActionButton from '@/components/common/ActionButton.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
@@ -52,6 +53,12 @@ const restoreGatheringMutation = GatheringsMutations.useRestoreGatheringMutation
 
 /** 活動詳細資料 */
 const gathering = computed(() => gatheringDetailQuery.data.value?.gatheringData ?? null)
+
+/** 活動建立者 userId（有活動資料後才查詢單筆使用者） */
+const gatheringCreatorUserId = computed(() => gathering.value?.userId ?? null)
+
+/** 建立者使用者資料（GET /users/:id，與列表分頁無關） */
+const creatorUserQuery = UsersHooks.useUserByIdQuery(gatheringCreatorUserId)
 
 /** 是否符合後端規則可編輯（僅 OPEN 且未封存） */
 const isGatheringEditable = computed(() => {
@@ -225,7 +232,70 @@ const scheduleItems = computed(() => {
   ]
 })
 
-/** 系統資訊卡欄位 */
+/** 建立者頭像縮寫 */
+const creatorInitials = computed(() => {
+  if (!gathering.value) {
+    return '—'
+  }
+
+  if (creatorUserQuery.isPending.value && !creatorUserQuery.data.value) {
+    return '⋯'
+  }
+
+  if (creatorUserQuery.isError.value && !creatorUserQuery.data.value) {
+    return '!'
+  }
+
+  const raw = creatorUserQuery.data.value?.displayName?.trim() ?? ''
+  if (!raw) {
+    return '?'
+  }
+
+  return raw.charAt(0).toUpperCase()
+})
+
+/** 建立者主標題（顯示名稱或狀態） */
+const creatorNameLine = computed(() => {
+  if (!gathering.value) {
+    return ''
+  }
+
+  if (creatorUserQuery.isPending.value && !creatorUserQuery.data.value) {
+    return '載入建立者資料中…'
+  }
+
+  if (creatorUserQuery.isError.value && !creatorUserQuery.data.value) {
+    return '無法載入建立者'
+  }
+
+  const creator = creatorUserQuery.data.value
+  if (creator) {
+    return DisplayText.getDisplayText(creator.displayName)
+  }
+
+  return '使用者'
+})
+
+/** 建立者副標題（信箱或說明） */
+const creatorEmailLine = computed(() => {
+  const email = creatorUserQuery.data.value?.email
+  if (email) {
+    return email
+  }
+
+  if (creatorUserQuery.isError.value) {
+    return '名稱與信箱無法顯示，請確認後端或權限設定'
+  }
+
+  return ''
+})
+
+/** 建立者區塊是否為異常狀態（用於邊框與頭像色） */
+const isCreatorPanelWarning = computed(
+  () => creatorUserQuery.isError.value && !creatorUserQuery.data.value,
+)
+
+/** 系統資訊卡欄位（建立者改由上方獨立區塊呈現） */
 const systemItems = computed(() => {
   if (!gathering.value) {
     return []
@@ -525,8 +595,59 @@ function submitGatheringAction() {
               </SingleInfoCard>
             </section>
 
-            <!-- 補充資訊卡（時間/系統） -->
+            <!-- 補充資訊卡（建立者 / 時間 / 系統） -->
             <section class="grid gap-4 lg:grid-cols-2">
+              <!-- 建立者：獨立橫幅，避免長字串擠在筆記本格線內 -->
+              <div
+                class="lg:col-span-2 flex flex-col gap-4 rounded-xl border p-4 shadow-sm transition-colors sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+                :class="
+                  isCreatorPanelWarning
+                    ? 'border-amber-300/80 bg-linear-to-br from-amber-50/90 to-white/80 dark:border-amber-600/40 dark:from-amber-950/35 dark:to-slate-900/80'
+                    : 'border-sky-200/90 bg-linear-to-br from-sky-50/50 via-white/90 to-white dark:border-sky-500/25 dark:from-sky-950/25 dark:via-slate-900/85 dark:to-slate-950/90'
+                "
+              >
+                <div
+                  class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold tracking-tight shadow-sm"
+                  :class="
+                    isCreatorPanelWarning
+                      ? 'border-amber-200/90 bg-amber-100/90 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/50 dark:text-amber-100'
+                      : 'border-sky-200/80 bg-sky-100/90 text-sky-900 dark:border-sky-700/50 dark:bg-sky-900/45 dark:text-sky-50'
+                  "
+                  aria-hidden="true"
+                >
+                  {{ creatorInitials }}
+                </div>
+                <div class="min-w-0 flex-1 space-y-1">
+                  <p class="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    建立者
+                  </p>
+                  <p class="text-lg font-semibold leading-snug text-foreground">
+                    {{ creatorNameLine }}
+                  </p>
+                  <p
+                    v-if="creatorEmailLine"
+                    class="truncate text-sm text-muted-foreground"
+                    :title="creatorEmailLine"
+                  >
+                    {{ creatorEmailLine }}
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+                  <Badge
+                    variant="outline"
+                    class="border-sky-300/90 bg-sky-50/90 font-mono text-xs tabular-nums text-sky-900 shadow-none dark:border-sky-600/45 dark:bg-sky-950/35 dark:text-sky-100"
+                  >
+                    ID {{ gathering.userId }}
+                  </Badge>
+                  <span
+                    v-if="creatorUserQuery.isPending.value && !creatorUserQuery.data.value"
+                    class="text-xs text-muted-foreground"
+                  >
+                    同步中
+                  </span>
+                </div>
+              </div>
+
               <NotebookInfoCard
                 title="時間資訊"
                 description="與報名與活動安排相關的時間節點"
@@ -535,7 +656,7 @@ function submitGatheringAction() {
 
               <NotebookInfoCard
                 title="系統資訊"
-                description="活動紀錄與最後異動資訊"
+                description="活動建立與最後異動時間"
                 :items="systemItems"
               />
             </section>

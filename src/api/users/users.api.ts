@@ -62,6 +62,23 @@ export class UsersApi {
     return res.userData
   }
 
+  /** 取得單一使用者 /users/:id */
+  static async getUserById(id: number): Promise<UserItem> {
+    const { data } = await ApiClient.instance.get<unknown>(`/users/${id}`)
+
+    if (
+      data &&
+      typeof data === 'object' &&
+      'userData' in data &&
+      data.userData &&
+      typeof data.userData === 'object'
+    ) {
+      return UsersApi.toUserItem(data.userData as RawUserResponse)
+    }
+
+    return UsersApi.toUserItem(data as RawUserResponse)
+  }
+
   /** 新增使用者（走註冊端點） */
   static async createUser(payload: CreateUserPayload): Promise<CreateUserResponse> {
     const { data } = await ApiClient.instance.post<JwtPayloadResponse>('/auth/register', payload)
