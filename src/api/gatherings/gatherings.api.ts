@@ -1,8 +1,10 @@
 import { ApiClient } from '../apiClient'
+import type { UserItem } from '../users/users.types'
 import type {
   GetGatheringsQuery,
   GetGatheringsResponse,
   GetGatheringByIdResponse,
+  GetGatheringParticipantsResponse,
   CreateGatheringPayload,
   CreateGatheringResponse,
   UpdateGatheringPayload,
@@ -59,6 +61,14 @@ export class GatheringsApi {
   static async getGatheringById(id: number): Promise<GetGatheringByIdResponse> {
     const { data } = await ApiClient.instance.get<GetGatheringByIdResponse>(`/gatherings/${id}`)
     return data
+  }
+
+  /** 取得已參加此活動的帳號列表 GET /gatherings/:id/participants */
+  static async getGatheringParticipants(gatheringId: number): Promise<UserItem[]> {
+    const { data } = await ApiClient.instance.get<GetGatheringParticipantsResponse>(
+      `/gatherings/${gatheringId}/participants`,
+    )
+    return Array.isArray(data.userData) ? data.userData : []
   }
 
   /** 新增活動 /gatherings */

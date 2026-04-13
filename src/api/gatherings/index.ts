@@ -8,6 +8,7 @@ export type {
   GetGatheringsQuery,
   GetGatheringsResponse,
   GetGatheringByIdResponse,
+  GetGatheringParticipantsResponse,
   CreateGatheringPayload,
   CreateGatheringResponse,
   UpdateGatheringPayload,

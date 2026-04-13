@@ -14,6 +14,7 @@ export class QueryKeys {
     all: ['gatherings'] as const,
     list: (query: GetGatheringsQuery) => ['gatherings', 'list', query] as const,
     detail: (id: number) => ['gatherings', 'detail', id] as const,
+    participants: (id: number) => ['gatherings', 'participants', id] as const,
   }
 
   static readonly users = {

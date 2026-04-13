@@ -48,7 +48,6 @@ const emit = defineEmits<TableFilterControlsEmits>()
 const ALL_VALUE = '__all__'
 </script>
 <template>
-  <!-- 列表容器：統一表格外框與陰影樣式 -->
   <div class="overflow-hidden rounded-xl border border-cyan-200 shadow-sm">
     <!-- 篩選與搜尋的整體區塊 -->
     <div

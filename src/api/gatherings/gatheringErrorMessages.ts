@@ -17,6 +17,14 @@ const GATHERING_DETAIL_ERROR_CODE_MAP: GatheringErrorCodeMap = {
   NOT_FOUND: '找不到此活動資料',
 }
 
+/** 活動參與者列表錯誤代碼對應中文 */
+const GATHERING_PARTICIPANTS_ERROR_CODE_MAP: GatheringErrorCodeMap = {
+  BAD_REQUEST: '無法讀取參與者列表，請確認活動或稍後再試',
+  UNAUTHORIZED: '登入已失效，請重新登入',
+  FORBIDDEN: '你沒有權限查看此活動的參與者列表',
+  NOT_FOUND: '找不到此活動或無權查看參與者列表',
+}
+
 /** 活動新增錯誤代碼對應中文 */
 const GATHERING_CREATE_ERROR_CODE_MAP: GatheringErrorCodeMap = {
   BAD_REQUEST: '新增活動資料格式錯誤，請確認欄位內容後再試',
@@ -39,6 +47,9 @@ export class GatheringErrorMessages {
   /** 活動詳細讀取失敗彈窗標題 */
   static readonly DETAIL_FETCH_FAILED_TITLE = '讀取活動詳細失敗'
 
+  /** 活動參與者列表讀取失敗彈窗標題 */
+  static readonly PARTICIPANTS_FETCH_FAILED_TITLE = '讀取參與者列表失敗'
+
   /** 活動新增失敗彈窗標題 */
   static readonly CREATE_FAILED_TITLE = '新增活動失敗'
 
@@ -50,6 +61,9 @@ export class GatheringErrorMessages {
 
   /** 活動詳細讀取失敗時預設顯示的通知文字 */
   static readonly DETAIL_FETCH_FAILED_MESSAGE = '讀取活動詳細失敗，請稍後再試'
+
+  /** 活動參與者列表讀取失敗時預設顯示的通知文字 */
+  static readonly PARTICIPANTS_FETCH_FAILED_MESSAGE = '讀取參與者列表失敗，請稍後再試'
 
   /** 活動新增失敗時預設顯示的通知文字 */
   static readonly CREATE_FAILED_MESSAGE = '新增活動失敗，請稍後再試'
@@ -77,6 +91,16 @@ export class GatheringErrorMessages {
       GATHERING_DETAIL_ERROR_CODE_MAP,
       GatheringErrorMessages.DETAIL_FETCH_FAILED_MESSAGE,
       GATHERING_DETAIL_ERROR_CODE_MAP.BAD_REQUEST,
+    )
+  }
+
+  /** 活動參與者列表讀取錯誤 */
+  static toParticipantsFetchErrorMessage(error: unknown): string {
+    return GatheringErrorMessages.toMappedFetchErrorMessage(
+      error,
+      GATHERING_PARTICIPANTS_ERROR_CODE_MAP,
+      GatheringErrorMessages.PARTICIPANTS_FETCH_FAILED_MESSAGE,
+      GATHERING_PARTICIPANTS_ERROR_CODE_MAP.BAD_REQUEST,
     )
   }
 

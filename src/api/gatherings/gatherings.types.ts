@@ -1,3 +1,5 @@
+import type { UserItem } from '../users/users.types'
+
 /** 活動狀態代碼 */
 export type GatheringStatus = 'OPEN' | 'UPCOMING' | 'CLOSED'
 
@@ -73,7 +75,13 @@ export interface GetGatheringByIdResponse {
   gatheringData: GatheringItem
 }
 
-/** 新增活動的請求資料（依後端 CreateGatheringDto） */
+/** 已參加帳號列表 */
+export interface GetGatheringParticipantsResponse {
+  userData: UserItem[]
+  result?: string
+}
+
+/** 新增活動的請求資料 */
 export interface CreateGatheringPayload {
   title: string
   description?: string
