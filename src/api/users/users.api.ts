@@ -1,5 +1,6 @@
 import { ApiClient } from '../apiClient'
 import type { AuthRegisterResponse } from '../auth/auth.types'
+import type { GatheringItem, GetGatheringsQuery, GetGatheringsResponse } from '../gatherings/gatherings.types'
 import type {
   GetUsersQuery,
   GetUsersResponse,
@@ -9,7 +10,7 @@ import type {
   UserItem,
 } from './users.types'
 
-/** 一般使用者欄位 */
+/** 使用者實體 */
 type UserEntityResponse = {
   id: number
   email: string
@@ -19,10 +20,10 @@ type UserEntityResponse = {
   updatedAt: string
 }
 
-/** 單筆使用者：可能是註冊回傳（sub）或一般實體 */
+/** 使用者回應 */
 type RawUserResponse = AuthRegisterResponse | UserEntityResponse
 
-/** GET /users 原始回應（items 即列表） */
+/** 使用者列表回應 */
 type RawGetUsersResponse = {
   items: GetUsersResponse['userData']
   page: number
@@ -30,9 +31,9 @@ type RawGetUsersResponse = {
   total: number
 }
 
-/** 呼叫後端使用者相關端點 */
+/** 使用者 API */
 export class UsersApi {
-  /** 分頁查詢使用者 */
+  /** 使用者列表 */
   static async getUsers(query: GetUsersQuery): Promise<GetUsersResponse> {
     const { data } = await ApiClient.instance.get<RawGetUsersResponse>('/users', {
       params: UsersApi.buildUsersQueryParams(query),
@@ -46,7 +47,7 @@ export class UsersApi {
     }
   }
 
-  /** 拉整份列表（由前端自己做篩選／排序／分頁） */
+  /** 全部使用者 */
   static async getAllUsers(): Promise<UserItem[]> {
     const limit = 500
     const items: UserItem[] = []
@@ -65,7 +66,7 @@ export class UsersApi {
     return items
   }
 
-  /** 取得單一使用者 /users/:id */
+  /** 單一使用者 */
   static async getUserById(id: number): Promise<UserItem> {
     const { data } = await ApiClient.instance.get<unknown>(`/users/${id}`)
 
@@ -82,13 +83,13 @@ export class UsersApi {
     return UsersApi.toUserItem(data as RawUserResponse)
   }
 
-  /** 更新指定使用者 */
+  /** 更新使用者 */
   static async updateUser(id: number, payload: UpdateUserPayload): Promise<UpdateUserResponse> {
     const { data } = await ApiClient.instance.patch<RawUserResponse>(`/users/${id}`, payload)
     return { userData: UsersApi.toUserItem(data) }
   }
 
-  /** 管理員更新指定使用者角色 */
+  /** 更新使用者角色 */
   static async updateUserRole(
     id: number,
     payload: UpdateUserRolePayload,
@@ -97,7 +98,63 @@ export class UsersApi {
     return { userData: UsersApi.toUserItem(data) }
   }
 
-  /** 只帶 page、limit，避免多送欄位被後端拒絕 */
+  /** 使用者建立活動 */
+  static async getUserCreatedGatherings(
+    userId: number,
+    query: GetGatheringsQuery,
+  ): Promise<GetGatheringsResponse> {
+    const { data } = await ApiClient.instance.get<GetGatheringsResponse>(
+      `/users/user/${userId}/gatherings/created`,
+      { params: UsersApi.buildGatheringsQueryParams(query) },
+    )
+    return data
+  }
+
+  /** 使用者參加活動 */
+  static async getUserParticipatedGatherings(
+    userId: number,
+    query: GetGatheringsQuery,
+  ): Promise<GetGatheringsResponse> {
+    const { data } = await ApiClient.instance.get<GetGatheringsResponse>(
+      `/users/user/${userId}/gatherings/participated`,
+      { params: UsersApi.buildGatheringsQueryParams(query) },
+    )
+    return data
+  }
+
+  /** 全部建立活動 */
+  static async getAllGatheringsCreatedByUser(
+    userId: number,
+    query: Omit<GetGatheringsQuery, 'page' | 'limit' | 'sortBy' | 'sortOrder'>,
+  ): Promise<GatheringItem[]> {
+    return UsersApi.fetchAllUserGatheringsPages((page, limit) =>
+      UsersApi.getUserCreatedGatherings(userId, {
+        ...query,
+        page,
+        limit,
+        sortBy: 'id',
+        sortOrder: 'ASC',
+      }),
+    )
+  }
+
+  /** 全部參加活動 */
+  static async getAllGatheringsParticipatedByUser(
+    userId: number,
+    query: Omit<GetGatheringsQuery, 'page' | 'limit' | 'sortBy' | 'sortOrder'>,
+  ): Promise<GatheringItem[]> {
+    return UsersApi.fetchAllUserGatheringsPages((page, limit) =>
+      UsersApi.getUserParticipatedGatherings(userId, {
+        ...query,
+        page,
+        limit,
+        sortBy: 'id',
+        sortOrder: 'ASC',
+      }),
+    )
+  }
+
+  /** 使用者查詢參數 */
   private static buildUsersQueryParams(query: GetUsersQuery) {
     const params: Record<string, unknown> = {}
 
@@ -111,7 +168,62 @@ export class UsersApi {
     return params
   }
 
-  /** 把後端單筆回應轉成前端的 UserItem */
+  /** 活動查詢參數 */
+  private static buildGatheringsQueryParams(query: GetGatheringsQuery) {
+    const params: Record<string, unknown> = {}
+
+    if (typeof query.page === 'number') {
+      params.page = query.page
+    }
+    if (typeof query.limit === 'number') {
+      params.limit = query.limit
+    }
+    if (query.sortBy) {
+      params.sortBy = query.sortBy
+    }
+    if (query.sortOrder) {
+      params.sortOrder = query.sortOrder
+    }
+    if (query.status) {
+      params.status = query.status
+    }
+    if (query.type) {
+      params.type = query.type
+    }
+    if (typeof query.isArchived === 'boolean') {
+      params.isArchived = query.isArchived
+    }
+    if (query.search?.trim()) {
+      params.search = query.search.trim()
+    }
+    if (Array.isArray(query.tags) && query.tags.length > 0) {
+      params.tags = query.tags
+    }
+
+    return params
+  }
+
+  private static async fetchAllUserGatheringsPages(
+    fetchPage: (page: number, limit: number) => Promise<GetGatheringsResponse>,
+  ): Promise<GatheringItem[]> {
+    const limit = 500
+    const items: GatheringItem[] = []
+    let page = 1
+    const maxPages = 10_000
+
+    while (page <= maxPages) {
+      const res = await fetchPage(page, limit)
+      items.push(...res.gatheringData)
+      if (res.gatheringData.length === 0 || res.gatheringData.length < limit) {
+        break
+      }
+      page += 1
+    }
+
+    return items
+  }
+
+  /** 轉換使用者資料 */
   private static toUserItem(payload: RawUserResponse): UserItem {
     if ('sub' in payload) {
       return {

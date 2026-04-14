@@ -39,49 +39,49 @@ import type {
 
 const route = useRoute()
 
-/** 目前活動 ID（來自路由參數） */
+/** 活動 ID */
 const gatheringId = computed(() => Number(route.params.id))
 
-/** 活動詳細資料查詢 */
+/** 活動查詢 */
 const gatheringDetailQuery = GatheringsHooks.useGatheringByIdQuery(gatheringId)
 
-/** 已參加帳號彈窗開關（開啟後才打 API） */
+/** 參與者彈窗 */
 const isParticipantsDialogOpen = ref(false)
 
 watch(gatheringId, () => {
   isParticipantsDialogOpen.value = false
 })
 
-/** 活動主資料載入成功且彈窗開啟時才請求參與者列表 */
+/** 參與者查詢開關 */
 const gatheringParticipantsQueryEnabled = computed(
   () => gatheringDetailQuery.isSuccess.value && isParticipantsDialogOpen.value,
 )
 
-/** 已參加此活動的帳號列表 */
+/** 參與者查詢 */
 const gatheringParticipantsQuery = GatheringsHooks.useGatheringParticipantsQuery(
   gatheringId,
   gatheringParticipantsQueryEnabled,
 )
 
-/** 活動詳細資料 */
+/** 活動資料 */
 const gathering = computed(() => gatheringDetailQuery.data.value?.gatheringData ?? null)
 
-/** 活動建立者 userId（有活動資料後才查詢單筆使用者） */
+/** 建立者 ID */
 const gatheringCreatorUserId = computed(() => gathering.value?.userId ?? null)
 
-/** 建立者使用者資料（GET /users/:id，與列表分頁無關） */
+/** 建立者查詢 */
 const creatorUserQuery = UsersHooks.useUserByIdQuery(gatheringCreatorUserId)
 
-/** 活動更新 mutation */
+/** 更新操作 */
 const updateGatheringMutation = GatheringsMutations.useUpdateGatheringMutation()
 
-/** 活動刪除 mutation */
+/** 刪除操作 */
 const deleteGatheringMutation = GatheringsMutations.useDeleteGatheringMutation()
 
-/** 活動恢復 mutation */
+/** 恢復操作 */
 const restoreGatheringMutation = GatheringsMutations.useRestoreGatheringMutation()
 
-/** 是否符合後端規則可編輯（僅 OPEN 且未封存） */
+/** 可編輯判斷 */
 const isGatheringEditable = computed(() => {
   if (!gathering.value) {
     return false
@@ -90,7 +90,7 @@ const isGatheringEditable = computed(() => {
   return !gathering.value.isArchived && gathering.value.status === 'OPEN'
 })
 
-/** 是否符合可刪除條件（僅 OPEN 且未封存） */
+/** 可刪除判斷 */
 const isGatheringDeletable = computed(() => {
   if (!gathering.value) {
     return false
@@ -99,7 +99,7 @@ const isGatheringDeletable = computed(() => {
   return !gathering.value.isArchived && gathering.value.status === 'OPEN'
 })
 
-/** 集中管理本頁所有 Dialog 開關與訊息 */
+/** Dialog 狀態 */
 const {
   isErrorDialogOpen,
   errorDialogMessage,
@@ -121,18 +121,18 @@ const {
   storeId: 'gatheringDetailDialogs',
 })
 
-// 離頁時重置狀態，避免回來時看到上次操作殘留的 Dialog
+// 離頁重置
 onBeforeUnmount(() => {
   resetDialogs()
 })
 
-/** 活動操作類型 */
+/** 操作型別 */
 type GatheringActionType = 'delete' | 'restore'
 
-/** 目前選取的活動操作 */
+/** 目前操作 */
 const selectedAction = ref<GatheringActionType | null>(null)
 
-/** 操作文案設定 */
+/** 操作文案 */
 const gatheringActionConfig: Record<
   GatheringActionType,
   { title: string; description: string; confirmLabel: string; errorTitle: string }
@@ -151,17 +151,17 @@ const gatheringActionConfig: Record<
   },
 }
 
-/** 目前操作文案 */
+/** 當前文案 */
 const selectedActionConfig = computed(() =>
   selectedAction.value ? gatheringActionConfig[selectedAction.value] : null,
 )
 
-/** 任一活動操作是否送出中 */
+/** 操作送出中 */
 const isGatheringActionPending = computed(
   () => deleteGatheringMutation.isPending.value || restoreGatheringMutation.isPending.value,
 )
 
-/** 編輯按鈕是否可點擊 */
+/** 編輯按鈕狀態 */
 const isEditActionDisabled = computed(
   () =>
     !isGatheringEditable.value ||
@@ -169,7 +169,7 @@ const isEditActionDisabled = computed(
     isGatheringActionPending.value,
 )
 
-/** 不可刪除時的狀態文案 */
+/** 不可刪除文案 */
 const undeletableStatusText = computed(() => {
   if (!gathering.value || isGatheringDeletable.value) {
     return ''
@@ -178,7 +178,7 @@ const undeletableStatusText = computed(() => {
   return GatheringsListText.STATUS_TEXT_MAP[gathering.value.status]
 })
 
-/** 危險操作說明文案 */
+/** 危險區說明 */
 const dangerActionDescription = computed(() => {
   if (!gathering.value) {
     return '目前沒有可操作的活動資料。'
@@ -195,13 +195,13 @@ const dangerActionDescription = computed(() => {
   return '刪除後活動會改為封存狀態，並從一般流程中移除。'
 })
 
-/** 危險操作按鈕文字 */
+/** 危險按鈕文字 */
 const dangerActionLabel = computed(() => (gathering.value?.isArchived ? '恢復刪除' : '刪除活動'))
 
-/** 危險操作按鈕顏色 */
+/** 危險按鈕色 */
 const dangerActionColor = computed(() => (gathering.value?.isArchived ? 'dangerLight' : 'danger'))
 
-/** 危險操作按鈕是否可點擊 */
+/** 危險按鈕狀態 */
 const isDangerActionDisabled = computed(() => {
   if (!gathering.value) {
     return true
@@ -218,7 +218,7 @@ const isDangerActionDisabled = computed(() => {
   )
 })
 
-/** 編輯表單資料 */
+/** 編輯表單 */
 const editForm = reactive<{
   description: string
   location: string
@@ -233,7 +233,7 @@ const editForm = reactive<{
   tags: [],
 })
 
-/** 活動類型選項（編輯彈窗） */
+/** 類型選單 */
 const gatheringTypeOptions = computed(() =>
   Object.entries(GatheringsListText.TYPE_TEXT_MAP).map(([value, label]) => ({
     value,
@@ -241,7 +241,7 @@ const gatheringTypeOptions = computed(() =>
   })),
 )
 
-/** 編輯欄位設定（可重用於不同編輯頁） */
+/** 編輯欄位 */
 const editDialogFields = computed<EditDialogField[]>(() => [
   {
     key: 'description',
@@ -278,7 +278,7 @@ const editDialogFields = computed<EditDialogField[]>(() => [
   },
 ])
 
-/** 時間資訊卡欄位 */
+/** 時間資訊 */
 const scheduleItems = computed(() => {
   if (!gathering.value) {
     return []
@@ -289,7 +289,7 @@ const scheduleItems = computed(() => {
   ]
 })
 
-/** 建立者頭像縮寫 */
+/** 建立者縮寫 */
 const creatorInitials = computed(() => {
   if (!gathering.value) {
     return '—'
@@ -307,7 +307,7 @@ const creatorInitials = computed(() => {
   return raw.charAt(0).toUpperCase()
 })
 
-/** 建立者主標題（顯示名稱或狀態） */
+/** 建立者名稱 */
 const creatorNameLine = computed(() => {
   if (!gathering.value) {
     return ''
@@ -325,7 +325,7 @@ const creatorNameLine = computed(() => {
   return '使用者'
 })
 
-/** 建立者副標題（信箱或說明） */
+/** 建立者信箱 */
 const creatorEmailLine = computed(() => {
   const email = creatorUserQuery.data.value?.email
   if (email) {
@@ -337,12 +337,12 @@ const creatorEmailLine = computed(() => {
   return ''
 })
 
-/** 建立者區塊是否為異常狀態（用於邊框與頭像色） */
+/** 建立者異常狀態 */
 const isCreatorPanelWarning = computed(
   () => creatorUserQuery.isError.value && !creatorUserQuery.data.value,
 )
 
-/** 系統資訊卡欄位（建立者改由上方獨立區塊呈現） */
+/** 系統資訊 */
 const systemItems = computed(() => {
   if (!gathering.value) {
     return []
@@ -353,30 +353,30 @@ const systemItems = computed(() => {
   ]
 })
 
-/** 活動標籤（顯示用） */
+/** 標籤資料 */
 const gatheringTags = computed(() =>
   NormalizeStringArray.toStringArray(gathering.value?.tags ?? []),
 )
 
-/** 參與者表格欄位 */
+/** 參與者欄位 */
 const participantTableColumns = [
   { key: 'id', label: '使用者 ID', sortable: false as const },
   { key: 'email', label: 'Email', sortable: false as const },
   { key: 'displayName', label: '顯示名稱', sortable: false as const },
 ]
 
-/** 參與者表格列資料 */
+/** 參與者列資料 */
 const participantTableRows = computed<Record<string, unknown>[]>(() =>
   (gatheringParticipantsQuery.data.value ?? []).map((item) => ({ ...item })),
 )
 
-/** 參與者列表載入失敗彈窗 */
+/** 參與者錯誤彈窗 */
 const isParticipantsErrorDialogOpen = ref(false)
 const participantsErrorDialogMessage = ref('')
 
-/** 錯誤訊息監聽器 */
+/** 錯誤監聽 */
 WatchErrorTransition.watch(
-  // 監聽活動詳細資料查詢錯誤狀態
+  // 活動查詢錯誤
   () => gatheringDetailQuery.isError.value,
   () => {
     openDetailError(
@@ -395,7 +395,7 @@ WatchErrorTransition.watch(
   },
 )
 
-/** 開啟參與者列表對話框 */
+/** 開啟參與者彈窗 */
 function openParticipantsDialog() {
   if (!gatheringDetailQuery.isSuccess.value) {
     return
@@ -403,18 +403,18 @@ function openParticipantsDialog() {
   isParticipantsDialogOpen.value = true
 }
 
-/** 關閉參與者列表對話框 */
+/** 關閉參與者彈窗 */
 function closeParticipantsDialog() {
   isParticipantsDialogOpen.value = false
 }
 
-/** 開啟編輯彈窗並帶入目前資料 */
+/** 開啟編輯彈窗 */
 function openEditDialog() {
   if (!gathering.value || !isGatheringEditable.value) {
     return
   }
 
-  // 由目前資料回填表單，確保編輯視窗開啟時內容與畫面一致
+  // 回填表單
   editForm.description = gathering.value.description ?? ''
   editForm.location = gathering.value.location ?? ''
   editForm.type = gathering.value.type ?? 'OTHER'
@@ -423,7 +423,7 @@ function openEditDialog() {
   openEditDialogState()
 }
 
-/** 編輯彈窗必填驗證失敗時顯示提示 */
+/** 編輯驗證錯誤 */
 function handleEditDialogValidationError(error: EditDialogValidationError) {
   openUpdateError({
     title: error.title,
@@ -431,14 +431,14 @@ function handleEditDialogValidationError(error: EditDialogValidationError) {
   })
 }
 
-/** 送出更新活動 */
+/** 送出更新 */
 function submitEditForm(formValues: Record<string, EditDialogFormValue>) {
-  // 如果活動詳細資料不存在，則返回
+  // 無資料不送出
   if (!gathering.value) {
     return
   }
 
-  // 解析表單資料
+  // 解析表單
   const parsed = UpdateGatheringFormSchema.parse(formValues, {
     eventStartTime: gathering.value.startTime,
   })
@@ -450,19 +450,19 @@ function submitEditForm(formValues: Record<string, EditDialogFormValue>) {
     return
   }
 
-  // 更新活動
+  // 送出更新
   updateGatheringMutation.mutate(
     {
       id: gathering.value.id,
       payload: parsed.payload,
     },
     {
-      // 成功時
+      // 更新成功
       onSuccess: () => {
         closeEditDialog()
         openUpdateSuccess()
       },
-      // 失敗時
+      // 更新失敗
       onError: (error) => {
         openUpdateError({
           title: GatheringErrorMessages.UPDATE_FAILED_TITLE,
@@ -473,7 +473,7 @@ function submitEditForm(formValues: Record<string, EditDialogFormValue>) {
   )
 }
 
-/** 開啟活動操作確認彈窗 */
+/** 開啟操作確認 */
 function openActionConfirmDialog(action: GatheringActionType) {
   if (action === 'delete' && !isGatheringDeletable.value) {
     return
@@ -482,7 +482,7 @@ function openActionConfirmDialog(action: GatheringActionType) {
   setActionConfirmDialogOpen(true)
 }
 
-/** 點擊危險操作按鈕後開啟對應確認視窗 */
+/** 危險操作點擊 */
 function onDangerActionClick() {
   if (!gathering.value) {
     return
@@ -490,18 +490,18 @@ function onDangerActionClick() {
   openActionConfirmDialog(gathering.value.isArchived ? 'restore' : 'delete')
 }
 
-/** 控制活動操作確認彈窗開關 */
+/** 操作確認開關 */
 function handleActionConfirmDialogOpenChange(value: boolean) {
   setActionConfirmDialogOpen(value)
 }
 
-/** 送出活動操作（刪除 / 恢復） */
+/** 送出刪除/恢復 */
 function submitGatheringAction() {
   if (!gathering.value) {
     return
   }
 
-  // 先固定當前 action，避免對話框關閉事件先清空 selectedAction 導致操作中斷
+  // 固定當前 action
   const action: GatheringActionType =
     selectedAction.value ?? (gathering.value.isArchived ? 'restore' : 'delete')
   const mutationPayload = { id: gathering.value.id }
@@ -519,23 +519,23 @@ function submitGatheringAction() {
   }
 
   if (action === 'delete') {
-    // 軟刪除：由後端將活動標記為封存
+    // 軟刪除
     deleteGatheringMutation.mutate(mutationPayload, { onSuccess, onError })
     return
   }
 
-  // 還原封存活動
+  // 還原活動
   restoreGatheringMutation.mutate(mutationPayload, { onSuccess, onError })
 }
 </script>
 
 <template>
   <main class="detail-page space-y-6">
-    <!-- 主要內容容器 -->
+    <!-- 主內容 -->
     <section>
       <Card class="border-slate-200/80 py-3 shadow-sm">
         <CardContent class="space-y-6 p-5 sm:p-6">
-          <!-- 返回按鈕置於左上，有活動資料時右側為操作按鈕 -->
+          <!-- 頂部操作 -->
           <section class="flex flex-wrap items-center justify-between gap-3">
             <Button
               as-child
@@ -547,7 +547,7 @@ function submitGatheringAction() {
                 <ArrowLeft class="h-4 w-4" />
               </RouterLink>
             </Button>
-            <!-- 活動資料存在時，顯示編輯與查看參與者按鈕 -->
+            <!-- 右側按鈕 -->
             <div v-if="gathering" class="flex flex-wrap items-center justify-end gap-2">
               <ActionButton
                 label="編輯活動"
@@ -564,12 +564,12 @@ function submitGatheringAction() {
             </div>
           </section>
 
-          <!-- 頁面標題區 -->
+          <!-- 標題區 -->
           <section>
             <CardSectionTitle title="活動詳細" subtitle="查看單一活動資訊與目前狀態" />
           </section>
 
-          <!-- 載入狀態 -->
+          <!-- 載入中 -->
           <div
             v-if="gatheringDetailQuery.isPending.value"
             class="py-6 text-center text-muted-foreground"
@@ -577,7 +577,7 @@ function submitGatheringAction() {
             {{ GatheringsListText.TEXT.states.loading }}
           </div>
 
-          <!-- 正常狀態：顯示活動詳細資料 -->
+          <!-- 詳細內容 -->
           <div v-else-if="gathering" class="space-y-6">
             <section
               v-if="gathering.isArchived"
@@ -586,23 +586,23 @@ function submitGatheringAction() {
               此活動目前為「已刪除（封存）」狀態，僅供後台檢視與管理。
             </section>
 
-            <!-- 活動主資訊（ID、類型、標題、狀態與描述） -->
+            <!-- 主資訊 -->
             <section
               class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-muted/20 p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
             >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
-                    <!-- 活動 ID -->
+                    <!-- ID -->
                     <Badge variant="outline" class="text-sm">Gathering #{{ gathering.id }}</Badge>
-                    <!-- 活動類型 -->
+                    <!-- 類型 -->
                     <Badge variant="secondary" class="text-sm">
                       {{
                         TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP)
                       }}
                     </Badge>
                   </div>
-                  <!-- 活動標題 -->
+                  <!-- 標題 -->
                   <h2 class="text-2xl font-semibold tracking-tight text-foreground">
                     {{ DisplayText.getDisplayText(gathering.title) }}
                   </h2>
@@ -612,12 +612,12 @@ function submitGatheringAction() {
                 </div>
               </div>
 
-              <!-- 活動描述 -->
+              <!-- 描述 -->
               <p class="text-base leading-relaxed text-muted-foreground">
                 {{ DisplayText.getDisplayText(gathering.description, '尚未提供活動描述') }}
               </p>
 
-              <!-- 活動標籤 -->
+              <!-- 標籤 -->
               <div class="space-y-2">
                 <p class="text-sm font-medium text-foreground">活動標籤</p>
                 <div class="flex flex-wrap gap-2">
@@ -636,7 +636,7 @@ function submitGatheringAction() {
               </div>
             </section>
 
-            <!-- 活動重點數值卡 -->
+            <!-- 指標卡 -->
             <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <SingleInfoCard title="名額上限">{{ gathering.participantNumbers }}</SingleInfoCard>
               <SingleInfoCard title="已參加人數">
@@ -650,16 +650,18 @@ function submitGatheringAction() {
               </SingleInfoCard>
             </section>
 
-            <!-- 補充資訊卡（建立者 / 時間 / 系統） -->
+            <!-- 補充資訊 -->
             <section class="grid gap-4 lg:grid-cols-2">
-              <!-- 建立者：獨立橫幅，避免長字串擠在筆記本格線內 -->
-              <div
-                class="lg:col-span-2 flex flex-col gap-4 rounded-xl border p-4 shadow-sm transition-colors sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+              <!-- 建立者 -->
+              <RouterLink
+                :to="`/admin/users/${gathering.userId}`"
+                class="lg:col-span-2 flex cursor-pointer flex-col gap-4 rounded-xl border p-4 text-inherit no-underline shadow-sm outline-offset-2 transition-colors sm:flex-row sm:items-center sm:gap-5 sm:p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 dark:focus-visible:ring-sky-500/60"
                 :class="
                   isCreatorPanelWarning
-                    ? 'border-amber-300/80 bg-linear-to-br from-amber-50/90 to-white/80 dark:border-amber-600/40 dark:from-amber-950/35 dark:to-slate-900/80'
-                    : 'border-sky-200/90 bg-linear-to-br from-sky-50/50 via-white/90 to-white dark:border-sky-500/25 dark:from-sky-950/25 dark:via-slate-900/85 dark:to-slate-950/90'
+                    ? 'border-amber-300/80 bg-linear-to-br from-amber-50/90 to-white/80 hover:border-amber-400/90 dark:border-amber-600/40 dark:from-amber-950/35 dark:to-slate-900/80 dark:hover:border-amber-500/55'
+                    : 'border-sky-200/90 bg-linear-to-br from-sky-50/50 via-white/90 to-white hover:border-sky-300/90 dark:border-sky-500/25 dark:from-sky-950/25 dark:via-slate-900/85 dark:to-slate-950/90 dark:hover:border-sky-400/40'
                 "
+                :aria-label="`前往建立者使用者詳細頁面（ID ${gathering.userId}）`"
               >
                 <div
                   class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold tracking-tight shadow-sm"
@@ -701,7 +703,7 @@ function submitGatheringAction() {
                     同步中
                   </span>
                 </div>
-              </div>
+              </RouterLink>
 
               <NotebookInfoCard
                 title="時間資訊"
@@ -715,7 +717,7 @@ function submitGatheringAction() {
               />
             </section>
 
-            <!-- 危險操作區塊 -->
+            <!-- 危險操作 -->
             <DangerActionPanel
               :description="dangerActionDescription"
               :action-label="dangerActionLabel"
@@ -725,7 +727,7 @@ function submitGatheringAction() {
             />
           </div>
 
-          <!-- API 載入失敗時顯示錯誤彈窗 -->
+          <!-- 載入錯誤 -->
           <AlertDialog
             v-model:open="isErrorDialogOpen"
             variant="error"
@@ -733,7 +735,7 @@ function submitGatheringAction() {
             :description="errorDialogMessage"
           />
 
-          <!-- 更新失敗時顯示錯誤彈窗 -->
+          <!-- 更新失敗 -->
           <AlertDialog
             v-model:open="isUpdateErrorDialogOpen"
             variant="error"
@@ -741,7 +743,7 @@ function submitGatheringAction() {
             :description="updateErrorDialogMessage"
           />
 
-          <!-- 更新成功時顯示成功彈窗 -->
+          <!-- 更新成功 -->
           <AlertDialog
             v-model:open="isUpdateSuccessDialogOpen"
             variant="success"
@@ -749,7 +751,7 @@ function submitGatheringAction() {
             description="活動資料已更新完成。"
           />
 
-          <!-- 參與者列表載入失敗 -->
+          <!-- 參與者錯誤 -->
           <AlertDialog
             v-model:open="isParticipantsErrorDialogOpen"
             variant="error"
@@ -760,7 +762,7 @@ function submitGatheringAction() {
       </Card>
     </section>
 
-    <!-- 刪除 / 恢復確認彈窗 -->
+    <!-- 刪除/恢復確認 -->
     <AlertDialog
       :open="isActionConfirmDialogOpen"
       variant="confirm"
@@ -775,7 +777,7 @@ function submitGatheringAction() {
       @confirm="submitGatheringAction"
     />
 
-    <!-- 編輯對話框 -->
+    <!-- 編輯活動 -->
     <EditDialog
       v-model:open="isEditDialogOpen"
       title="編輯活動"
@@ -787,7 +789,7 @@ function submitGatheringAction() {
       @submit="submitEditForm"
     />
 
-    <!-- 已參加帳號（彈窗，開啟時載入 GET /gatherings/:id/participants） -->
+    <!-- 參與者彈窗 -->
     <section
       v-if="isParticipantsDialogOpen"
       class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50 px-4 py-4 backdrop-blur-[2px] sm:py-6"
@@ -825,7 +827,7 @@ function submitGatheringAction() {
           class="min-h-0 flex-1 overflow-y-auto bg-white/95 px-4 py-4 dark:bg-blue-950 dark:text-blue-50 sm:px-6"
         >
           <div class="overflow-hidden rounded-xl border border-cyan-200 shadow-sm">
-            <!-- 參與者列表表格 -->
+            <!-- 參與者表格 -->
             <TableDataGrid
               :columns="participantTableColumns"
               :rows="participantTableRows"

@@ -132,6 +132,78 @@ describe('UsersApi', () => {
     expect(res.userData.displayName).toBe('新')
   })
 
+  it('getUserCreatedGatherings 呼叫 GET /users/user/:id/gatherings/created', async () => {
+    const getSpy = vi.spyOn(ApiClient.instance, 'get').mockResolvedValue({
+      data: {
+        gatheringData: [
+          {
+            id: 1,
+            userId: 5,
+            title: 'T',
+            description: 'd',
+            location: 'L',
+            participantNumbers: 10,
+            price: 0,
+            type: 'OTHER',
+            status: 'OPEN',
+            isArchived: false,
+            startTime: '2026-01-01T00:00:00.000Z',
+            deadline: '2026-01-02T00:00:00.000Z',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            tags: [],
+          },
+        ],
+        page: 1,
+        limit: 500,
+        total: 1,
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as never,
+    })
+
+    const res = await UsersApi.getUserCreatedGatherings(5, { page: 1, limit: 500 })
+    expect(getSpy).toHaveBeenCalledWith('/users/user/5/gatherings/created', {
+      params: { page: 1, limit: 500 },
+    })
+    expect(res.gatheringData).toHaveLength(1)
+    expect(res.gatheringData[0]?.title).toBe('T')
+  })
+
+  it('getAllGatheringsParticipatedByUser 串接分頁', async () => {
+    const getSpy = vi.spyOn(ApiClient.instance, 'get')
+    getSpy
+      .mockResolvedValueOnce({
+        data: {
+          gatheringData: [{ id: 1 } as never],
+          page: 1,
+          limit: 500,
+          total: 501,
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as never,
+      })
+      .mockResolvedValueOnce({
+        data: { gatheringData: [], page: 2, limit: 500, total: 501 },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as never,
+      })
+
+    const all = await UsersApi.getAllGatheringsParticipatedByUser(3, {})
+    expect(all).toHaveLength(1)
+    expect(getSpy).toHaveBeenNthCalledWith(
+      1,
+      '/users/user/3/gatherings/participated',
+      expect.any(Object),
+    )
+  })
+
   it('updateUserRole 呼叫 PATCH /users/:id/role', async () => {
     const patchSpy = vi.spyOn(ApiClient.instance, 'patch').mockResolvedValue({
       data: {

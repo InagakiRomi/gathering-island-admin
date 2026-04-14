@@ -60,6 +60,11 @@ const router = createRouter({
           component: () => import('@/views/admin/UserListPage.vue'),
         },
         {
+          path: 'users/:id',
+          name: 'admin-user-detail',
+          component: () => import('@/views/admin/UserDetailPage.vue'),
+        },
+        {
           path: 'tags',
           name: 'admin-tags',
           component: () => import('@/views/admin/TagListPage.vue'),

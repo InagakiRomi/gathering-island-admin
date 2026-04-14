@@ -14,17 +14,10 @@ import ActionButton from '@/components/common/ActionButton.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import EditDialog from '@/components/common/EditDialog.vue'
-import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
-import TableDataGrid from '@/components/table/TableDataGrid.vue'
-import TableFilterControls from '@/components/table/TableFilterControls.vue'
-import TablePaginationBar from '@/components/table/TablePaginationBar.vue'
+import GatheringTableSection from '@/components/common/GatheringTableSection.vue'
 import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { TableCell } from '@/components/ui/table'
 import { useListPageController } from '@/composables/useListPageController'
-import { DateTime } from '@/lib/dateTime'
-import { DisplayText } from '@/lib/displayText'
-import { TableDisplay } from '@/lib/tableDisplay'
 import { WatchErrorTransition } from '@/lib/watchErrorTransition'
 import { SeriesListStoreFactory } from '@/stores/seriesList'
 
@@ -33,7 +26,7 @@ const text = GatheringsListText.TEXT
 const filterKeys = ['status', 'type', 'isArchived'] as const
 type GatheringFilterKey = (typeof filterKeys)[number]
 
-/** 建立列表 store：負責把畫面條件轉為 API query 參數 */
+/** 列表 Store */
 const useGatheringListStore = SeriesListStoreFactory.createStore<
   GatheringFilterKey,
   GetGatheringsQuery
@@ -49,10 +42,10 @@ const useGatheringListStore = SeriesListStoreFactory.createStore<
   }),
 })
 
-/** 共用表格控制器（搜尋、篩選、分頁） */
+/** 表格控制器 */
 const gatheringListStore = useGatheringListStore()
 
-/** 列表表頭欄位 */
+/** 表格欄位 */
 const tableColumns = [
   { key: 'id', label: text.table.id, sortable: true },
   { key: 'title', label: text.table.title, sortable: false },
@@ -66,7 +59,7 @@ const tableColumns = [
   { key: 'actions', label: text.table.actions, sortable: false },
 ]
 
-/** 統一管理列表頁常見狀態：搜尋、篩選、排序、分頁與錯誤彈窗 */
+/** 列表狀態 */
 const { tableControls, sortBy, sortOrder, onFilterUpdate, onSortChange, isErrorDialogOpen } =
   useListPageController(gatheringListStore, {
     filterKeys,
@@ -75,11 +68,11 @@ const { tableControls, sortBy, sortOrder, onFilterUpdate, onSortChange, isErrorD
     unsortableKeys: ['actions'],
   })
 
-/** 依搜尋／篩選拉齊全部活動後，再由前端排序與分頁 */
+/** 列表查詢 */
 const gatheringsFetchParams = computed(() => gatheringListStore.queryParams)
 const gatheringsQuery = GatheringsHooks.useAllGatheringsQuery(gatheringsFetchParams)
 
-/** 使用新增活動表單 */
+/** 新增表單 */
 const {
   createForm,
   createDialogFields,
@@ -95,7 +88,7 @@ const {
   submitCreateForm,
 } = GatheringsCreateForm.useCreateGatheringForm()
 
-/** 前端補強篩選：避免後端條件尚未覆蓋時出現不一致資料 */
+/** 條件篩選 */
 function isMatchSelectedFilters(item: GatheringItem): boolean {
   const { status, type, isArchived } = tableControls.filters
 
@@ -118,7 +111,7 @@ function isMatchSelectedFilters(item: GatheringItem): boolean {
   return true
 }
 
-/** 表頭排序（整份資料已載入，於前端排序） */
+/** 活動排序 */
 function compareGatheringsForSort(
   first: GatheringItem,
   second: GatheringItem,
@@ -162,7 +155,7 @@ function compareGatheringsForSort(
   return 0
 }
 
-/** 依條件處理後的完整列表（供總筆數與分頁切片） */
+/** 篩選後列表 */
 const filteredSortedGatherings = computed(() => {
   const items = gatheringsQuery.data.value ?? []
 
@@ -171,7 +164,7 @@ const filteredSortedGatherings = computed(() => {
     .sort((a, b) => compareGatheringsForSort(a, b, sortBy.value, sortOrder.value))
 })
 
-/** 目前頁面要顯示的活動資料 */
+/** 當前頁資料 */
 const gatheringRows = computed<Record<string, unknown>[]>(() => {
   const page = tableControls.page.value
   const limit = tableControls.limit.value
@@ -182,7 +175,7 @@ const gatheringRows = computed<Record<string, unknown>[]>(() => {
     .map((item: GatheringItem): Record<string, unknown> => ({ ...item }))
 })
 
-/** 共用表格篩選欄位設定 */
+/** 篩選欄位 */
 const filterControls = computed<TableFilterControl[]>(() => [
   {
     key: 'status',
@@ -212,7 +205,7 @@ watchEffect(() => {
   }
 })
 
-/** 監聽錯誤狀態 */
+/** 錯誤監聽 */
 WatchErrorTransition.watch(
   () => gatheringsQuery.isError.value,
   () => {
@@ -220,9 +213,9 @@ WatchErrorTransition.watch(
   },
 )
 
-/** 錯誤彈窗開關事件 */
+/** 錯誤彈窗 */
 function handleErrorDialogOpenChange(value: boolean) {
-  // 對話框採受控模式，這裡同步 store 狀態與元件事件
+  // 同步狀態
   if (value) {
     gatheringListStore.openErrorDialog()
     return
@@ -235,10 +228,10 @@ function handleErrorDialogOpenChange(value: boolean) {
 <template>
   <main>
     <section>
-      <!-- 活動列表主卡片：包含查詢、列表、分頁與錯誤提示 -->
+      <!-- 活動列表 -->
       <Card>
         <CardHeader>
-          <!-- 頁面標題與副標：抽成共用元件，統一卡片頂部視覺 -->
+          <!-- 標題區 -->
           <CardSectionTitle :title="text.title" :subtitle="text.subtitle">
             <template #actions>
               <ActionButton color="cyan" :label="text.actions.create" @click="openCreateDialog" />
@@ -247,87 +240,35 @@ function handleErrorDialogOpenChange(value: boolean) {
         </CardHeader>
 
         <CardContent>
-          <!-- 搜尋與篩選控制列 -->
-          <TableFilterControls
+          <!-- 查詢區 -->
+          <GatheringTableSection
             :search-value="tableControls.searchInput.value"
             :search-label="text.labels.search"
             :search-placeholder="text.placeholders.search"
             :search-button-text="text.actions.search"
             :filters="filterControls"
+            :columns="tableColumns"
+            :rows="gatheringRows"
+            :is-loading="gatheringsQuery.isPending.value"
+            :loading-text="text.states.loading"
+            :empty-text="text.states.empty"
+            :sort-by="sortBy"
+            :sort-order="sortOrder"
+            :total="tableControls.total.value"
+            :page="tableControls.page.value"
+            :total-pages="tableControls.totalPages.value"
+            :pagination-text="text.pagination"
+            :prev-button-text="text.actions.prevPage"
+            :next-button-text="text.actions.nextPage"
+            :detail-button-text="text.actions.detail"
             @update:search-value="tableControls.updateSearchInput"
             @update:filter="onFilterUpdate"
             @search="tableControls.onSearch"
-          >
-            <!-- 表格：顯示活動列表 -->
-            <TableDataGrid
-              :columns="tableColumns"
-              :rows="gatheringRows"
-              :is-loading="gatheringsQuery.isPending.value"
-              :loading-text="text.states.loading"
-              :empty-text="text.states.empty"
-              :sort-by="sortBy"
-              :sort-order="sortOrder"
-              @sort-change="onSortChange"
-            >
-              <!-- 活動資料列：依 tableColumns 順序渲染每一欄 -->
-              <template #row="{ row: gathering }">
-                <TableCell class="text-center">{{ gathering.id }}</TableCell>
-                <TableCell class="max-w-[220px] text-left!">
-                  <div class="flex w-full justify-start">
-                    <span class="inline-block max-w-full truncate text-left">
-                      {{ DisplayText.getDisplayText(String(gathering.title ?? '-')) }}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell class="text-center">
-                  {{ TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP) }}
-                </TableCell>
-                <TableCell class="text-center">
-                  <!-- 狀態以 badge 顯示，文字與樣式由映射表統一管理 -->
-                  <GatheringStatusBadge :status="gathering.status" />
-                </TableCell>
-                <TableCell class="max-w-[220px] text-left!">
-                  <div class="flex w-full justify-start">
-                    <span class="inline-block max-w-full truncate text-left">
-                      {{ DisplayText.getDisplayText(String(gathering.location ?? '-')) }}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell class="text-center">
-                  {{ DateTime.format(String(gathering.startTime ?? '')) }}
-                </TableCell>
-                <TableCell class="text-center">
-                  {{ DateTime.format(String(gathering.deadline ?? '')) }}
-                </TableCell>
-                <TableCell class="text-center">{{ gathering.participantNumbers }}</TableCell>
+            @sort-change="(payload) => onSortChange(payload as never)"
+            @go-page="tableControls.setPage"
+          />
 
-                <!-- 價格維持美元符號前綴顯示 -->
-                <TableCell class="text-center">${{ gathering.price }}</TableCell>
-
-                <!-- 按鈕區域 -->
-                <TableCell class="text-center">
-                  <ActionButton
-                    :to="`/admin/gatherings/${gathering.id}`"
-                    :label="text.actions.detail"
-                    size="sm"
-                  />
-                </TableCell>
-              </template>
-            </TableDataGrid>
-
-            <!-- 分頁列：依 tableControls 的狀態切換頁碼 -->
-            <TablePaginationBar
-              :total="tableControls.total.value"
-              :page="tableControls.page.value"
-              :total-pages="tableControls.totalPages.value"
-              :text="text.pagination"
-              :prev-button-text="text.actions.prevPage"
-              :next-button-text="text.actions.nextPage"
-              @go-page="tableControls.setPage"
-            />
-          </TableFilterControls>
-
-          <!-- API 載入失敗時顯示錯誤彈窗 -->
+          <!-- 列表錯誤 -->
           <AlertDialog
             :open="isErrorDialogOpen"
             variant="error"
@@ -338,7 +279,7 @@ function handleErrorDialogOpenChange(value: boolean) {
             @update:open="handleErrorDialogOpenChange"
           />
 
-          <!-- 新增活動失敗提示 -->
+          <!-- 新增失敗 -->
           <AlertDialog
             v-model:open="isCreateErrorDialogOpen"
             variant="error"
@@ -346,7 +287,7 @@ function handleErrorDialogOpenChange(value: boolean) {
             :description="createErrorDialogMessage"
           />
 
-          <!-- 新增活動成功提示 -->
+          <!-- 新增成功 -->
           <AlertDialog
             v-model:open="isCreateSuccessDialogOpen"
             variant="success"
@@ -357,7 +298,7 @@ function handleErrorDialogOpenChange(value: boolean) {
       </Card>
     </section>
 
-    <!-- 新增活動對話框 -->
+    <!-- 新增活動 -->
     <EditDialog
       :open="isCreateDialogOpen"
       title="新增活動"

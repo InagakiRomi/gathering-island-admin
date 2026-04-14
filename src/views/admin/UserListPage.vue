@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
 import { AuthCreateForm } from '@/api/auth'
-import {
-  UserErrorMessages,
-  UsersEditForm,
-  UsersHooks,
-  UsersListText,
-  UsersRoleForm,
-  type GetUsersQuery,
-  type UserItem,
-} from '@/api/users'
+import { UserErrorMessages, UsersHooks, UsersListText, type GetUsersQuery, type UserItem } from '@/api/users'
 import ActionButton from '@/components/common/ActionButton.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
@@ -32,17 +24,17 @@ const text = UsersListText.TEXT
 const filterKeys = ['role'] as const
 type UserFilterKey = (typeof filterKeys)[number]
 
-/** 建立列表 store：分頁／搜尋／篩選狀態（完整資料由 useAllUsersQuery 載入後在前端處理） */
+/** 列表 Store */
 const useUserListStore = SeriesListStoreFactory.createStore<UserFilterKey, GetUsersQuery>({
   storeId: 'userList',
   filterKeys,
   buildQueryParams: () => ({}),
 })
 
-/** 共用表格控制器（搜尋、篩選、分頁） */
+/** 表格控制器 */
 const userListStore = useUserListStore()
 
-/** 列表表頭欄位 */
+/** 表格欄位 */
 const tableColumns = [
   { key: 'id', label: text.table.id, sortable: true },
   { key: 'email', label: text.table.email, sortable: false },
@@ -53,7 +45,7 @@ const tableColumns = [
   { key: 'actions', label: text.table.actions, sortable: false },
 ]
 
-/** 統一管理列表頁常見狀態：搜尋、篩選、排序、分頁與錯誤彈窗 */
+/** 列表狀態 */
 const { tableControls, sortBy, sortOrder, onFilterUpdate, onSortChange, isErrorDialogOpen } =
   useListPageController(userListStore, {
     filterKeys,
@@ -62,10 +54,10 @@ const { tableControls, sortBy, sortOrder, onFilterUpdate, onSortChange, isErrorD
     unsortableKeys: ['actions'],
   })
 
-/** 載入全部用戶後，搜尋／角色／排序／分頁皆在前端套用 */
+/** 使用者查詢 */
 const usersQuery = UsersHooks.useAllUsersQuery()
 
-/** 使用註冊帳號表單（POST /auth/register） */
+/** 註冊表單 */
 const {
   createForm,
   createDialogFields,
@@ -81,39 +73,7 @@ const {
   submitCreateForm,
 } = AuthCreateForm.useRegisterForm()
 
-/** 使用編輯用戶名稱表單 */
-const {
-  editDialogFields,
-  editErrorDialogMessage,
-  editErrorDialogTitle,
-  editForm,
-  handleEditDialogOpenChange,
-  handleEditDialogValidationError,
-  isEditDialogOpen,
-  isEditErrorDialogOpen,
-  isEditSuccessDialogOpen,
-  openEditDialog,
-  submitEditForm,
-  updateUserMutation,
-} = UsersEditForm.useEditUserForm()
-
-/** 管理員變更使用者角色 */
-const {
-  handleRoleDialogOpenChange,
-  handleRoleDialogValidationError,
-  isRoleDialogOpen,
-  isRoleErrorDialogOpen,
-  isRoleSuccessDialogOpen,
-  openRoleDialog,
-  roleDialogFields,
-  roleErrorDialogMessage,
-  roleErrorDialogTitle,
-  roleForm,
-  submitRoleForm,
-  updateUserRoleMutation,
-} = UsersRoleForm.useChangeUserRoleForm()
-
-/** 角色篩選 */
+/** 條件篩選 */
 function isMatchSelectedFilters(item: UserItem): boolean {
   const { role } = tableControls.filters
 
@@ -124,7 +84,7 @@ function isMatchSelectedFilters(item: UserItem): boolean {
   return true
 }
 
-/** 關鍵字搜尋（email、顯示名稱） */
+/** 關鍵字搜尋 */
 function matchesSearchKeyword(item: UserItem, keyword: string): boolean {
   const normalized = keyword.trim().toLowerCase()
   if (!normalized) {
@@ -137,7 +97,7 @@ function matchesSearchKeyword(item: UserItem, keyword: string): boolean {
   )
 }
 
-/** 表頭排序 */
+/** 使用者排序 */
 function compareUsersForSort(a: UserItem, b: UserItem, key: string, order: 'ASC' | 'DESC'): number {
   const dir = order === 'ASC' ? 1 : -1
 
@@ -156,7 +116,7 @@ function compareUsersForSort(a: UserItem, b: UserItem, key: string, order: 'ASC'
   return 0
 }
 
-/** 依條件處理後的完整列表（供總筆數與分頁切片） */
+/** 篩選後列表 */
 const filteredSortedUsers = computed(() => {
   const keyword = tableControls.searchKeyword.value
   const items = usersQuery.data.value ?? []
@@ -167,7 +127,7 @@ const filteredSortedUsers = computed(() => {
     .sort((a, b) => compareUsersForSort(a, b, sortBy.value, sortOrder.value))
 })
 
-/** 目前頁要顯示的用戶列 */
+/** 當前頁資料 */
 const userRows = computed<Record<string, unknown>[]>(() => {
   const page = tableControls.page.value
   const limit = tableControls.limit.value
@@ -177,7 +137,7 @@ const userRows = computed<Record<string, unknown>[]>(() => {
     .map((item): Record<string, unknown> => ({ ...item }))
 })
 
-/** 共用表格篩選欄位設定 */
+/** 篩選欄位 */
 const filterControls = computed<TableFilterControl[]>(() => [
   {
     key: 'role',
@@ -195,7 +155,7 @@ watchEffect(() => {
   }
 })
 
-/** 監聽錯誤狀態 */
+/** 錯誤監聽 */
 WatchErrorTransition.watch(
   () => usersQuery.isError.value,
   () => {
@@ -203,9 +163,9 @@ WatchErrorTransition.watch(
   },
 )
 
-/** 錯誤彈窗開關事件 */
+/** 錯誤彈窗 */
 function handleErrorDialogOpenChange(value: boolean) {
-  // 對話框採受控模式，這裡同步 store 狀態與元件事件
+  // 同步狀態
   if (value) {
     userListStore.openErrorDialog()
     return
@@ -218,10 +178,10 @@ function handleErrorDialogOpenChange(value: boolean) {
 <template>
   <main>
     <section>
-      <!-- 用戶列表主卡片：包含查詢、列表、分頁與錯誤提示 -->
+      <!-- 用戶列表 -->
       <Card>
         <CardHeader>
-          <!-- 頁面標題與副標：抽成共用元件，統一卡片頂部視覺 -->
+          <!-- 標題區 -->
           <CardSectionTitle :title="text.title" :subtitle="text.subtitle">
             <template #actions>
               <ActionButton color="cyan" :label="text.actions.create" @click="openCreateDialog" />
@@ -230,7 +190,7 @@ function handleErrorDialogOpenChange(value: boolean) {
         </CardHeader>
 
         <CardContent>
-          <!-- 搜尋與篩選控制列 -->
+          <!-- 查詢區 -->
           <TableFilterControls
             :search-value="tableControls.searchInput.value"
             :search-label="text.labels.search"
@@ -241,7 +201,7 @@ function handleErrorDialogOpenChange(value: boolean) {
             @update:filter="onFilterUpdate"
             @search="tableControls.onSearch"
           >
-            <!-- 表格：顯示用戶列表 -->
+            <!-- 資料表格 -->
             <TableDataGrid
               :columns="tableColumns"
               :rows="userRows"
@@ -252,7 +212,7 @@ function handleErrorDialogOpenChange(value: boolean) {
               :sort-order="sortOrder"
               @sort-change="onSortChange"
             >
-              <!-- 用戶資料列：依 tableColumns 順序渲染每一欄 -->
+              <!-- 用戶資料列 -->
               <template #row="{ row: user }">
                 <TableCell class="text-center">{{ user.id }}</TableCell>
                 <TableCell class="max-w-[300px] text-left!">
@@ -275,23 +235,16 @@ function handleErrorDialogOpenChange(value: boolean) {
                   {{ DateTime.format(String(user.updatedAt ?? '')) }}
                 </TableCell>
                 <TableCell class="text-center">
-                  <div class="flex flex-wrap items-center justify-center gap-2">
-                    <ActionButton
-                      :label="text.actions.edit"
-                      size="sm"
-                      @click="openEditDialog(user as unknown as UserItem)"
-                    />
-                    <ActionButton
-                      :label="text.actions.editRole"
-                      size="sm"
-                      @click="openRoleDialog(user as unknown as UserItem)"
-                    />
-                  </div>
+                  <ActionButton
+                    :to="`/admin/users/${user.id}`"
+                    :label="text.actions.detail"
+                    size="sm"
+                  />
                 </TableCell>
               </template>
             </TableDataGrid>
 
-            <!-- 分頁列：依 tableControls 的狀態切換頁碼 -->
+            <!-- 分頁列 -->
             <TablePaginationBar
               :total="tableControls.total.value"
               :page="tableControls.page.value"
@@ -303,7 +256,7 @@ function handleErrorDialogOpenChange(value: boolean) {
             />
           </TableFilterControls>
 
-          <!-- API 載入失敗時顯示錯誤彈窗 -->
+          <!-- 列表錯誤 -->
           <AlertDialog
             :open="isErrorDialogOpen"
             variant="error"
@@ -312,7 +265,7 @@ function handleErrorDialogOpenChange(value: boolean) {
             @update:open="handleErrorDialogOpenChange"
           />
 
-          <!-- 註冊帳號失敗提示 -->
+          <!-- 註冊失敗 -->
           <AlertDialog
             v-model:open="isCreateErrorDialogOpen"
             variant="error"
@@ -320,7 +273,7 @@ function handleErrorDialogOpenChange(value: boolean) {
             :description="createErrorDialogMessage"
           />
 
-          <!-- 註冊帳號成功提示 -->
+          <!-- 註冊成功 -->
           <AlertDialog
             v-model:open="isCreateSuccessDialogOpen"
             variant="success"
@@ -328,42 +281,11 @@ function handleErrorDialogOpenChange(value: boolean) {
             description="新帳號已建立。"
           />
 
-          <!-- 更新用戶失敗提示 -->
-          <AlertDialog
-            v-model:open="isEditErrorDialogOpen"
-            variant="error"
-            :title="editErrorDialogTitle"
-            :description="editErrorDialogMessage"
-          />
-
-          <!-- 更新用戶成功提示 -->
-          <AlertDialog
-            v-model:open="isEditSuccessDialogOpen"
-            variant="success"
-            title="更新成功"
-            description="用戶名稱已更新。"
-          />
-
-          <!-- 變更角色失敗提示 -->
-          <AlertDialog
-            v-model:open="isRoleErrorDialogOpen"
-            variant="error"
-            :title="roleErrorDialogTitle"
-            :description="roleErrorDialogMessage"
-          />
-
-          <!-- 變更角色成功提示 -->
-          <AlertDialog
-            v-model:open="isRoleSuccessDialogOpen"
-            variant="success"
-            title="更新成功"
-            description="使用者角色已更新。"
-          />
         </CardContent>
       </Card>
     </section>
 
-    <!-- 註冊帳號對話框 -->
+    <!-- 註冊帳號 -->
     <EditDialog
       :open="isCreateDialogOpen"
       title="註冊新帳號"
@@ -377,32 +299,5 @@ function handleErrorDialogOpenChange(value: boolean) {
       @submit="submitCreateForm"
     />
 
-    <!-- 編輯用戶名稱對話框 -->
-    <EditDialog
-      :open="isEditDialogOpen"
-      title="修改用戶名稱"
-      subtitle="請輸入新的顯示名稱"
-      :fields="editDialogFields"
-      :form="editForm"
-      :is-submitting="updateUserMutation.isPending.value"
-      :submit-label="{ idle: '儲存名稱', submitting: '更新中...' }"
-      @update:open="handleEditDialogOpenChange"
-      @validation-error="handleEditDialogValidationError"
-      @submit="submitEditForm"
-    />
-
-    <!-- 管理員變更使用者角色 -->
-    <EditDialog
-      :open="isRoleDialogOpen"
-      title="修改使用者角色"
-      subtitle="選擇一般使用者或管理員。不可將系統僅存的管理員降級。"
-      :fields="roleDialogFields"
-      :form="roleForm"
-      :is-submitting="updateUserRoleMutation.isPending.value"
-      :submit-label="{ idle: '儲存角色', submitting: '更新中...' }"
-      @update:open="handleRoleDialogOpenChange"
-      @validation-error="handleRoleDialogValidationError"
-      @submit="submitRoleForm"
-    />
   </main>
 </template>

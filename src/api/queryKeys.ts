@@ -1,5 +1,11 @@
 import type { GetGatheringsQuery } from './gatherings/gatherings.types'
 
+/** 使用者聚會列表查詢參數 */
+export type UserGatheringsListAllQuery = Omit<
+  GetGatheringsQuery,
+  'page' | 'limit' | 'sortBy' | 'sortOrder'
+>
+
 /** TanStack Query keys */
 export class QueryKeys {
   static readonly auth = {
@@ -22,6 +28,10 @@ export class QueryKeys {
     all: ['users'] as const,
     listAll: () => ['users', 'list-all'] as const,
     detail: (id: number) => ['users', 'detail', id] as const,
+    createdGatheringsListAll: (userId: number, query: UserGatheringsListAllQuery) =>
+      ['users', userId, 'gatherings-created', query] as const,
+    participatedGatheringsListAll: (userId: number, query: UserGatheringsListAllQuery) =>
+      ['users', userId, 'gatherings-participated', query] as const,
   }
 
   static readonly tags = {
