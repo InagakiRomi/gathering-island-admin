@@ -14,6 +14,13 @@ describe('UserErrorMessages', () => {
     expect(UserErrorMessages.toUpdateErrorMessage(err)).toBe('找不到此使用者資料')
   })
 
+  it('toRoleUpdateErrorMessage：FORBIDDEN（管理員不可自變更角色）', () => {
+    const err = new ApiClientError('m', 403, { code: 'FORBIDDEN' })
+    expect(UserErrorMessages.toRoleUpdateErrorMessage(err)).toBe(
+      '管理者不能自己移除身分；若需調整角色，請由其他管理員操作。',
+    )
+  })
+
   it('非 ApiClientError 回傳預設', () => {
     expect(UserErrorMessages.toListFetchErrorMessage({})).toBe(UserErrorMessages.LIST_FETCH_FAILED_MESSAGE)
   })

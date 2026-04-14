@@ -131,4 +131,25 @@ describe('UsersApi', () => {
     const res = await UsersApi.updateUser(1, { displayName: '新' })
     expect(res.userData.displayName).toBe('新')
   })
+
+  it('updateUserRole 呼叫 PATCH /users/:id/role', async () => {
+    const patchSpy = vi.spyOn(ApiClient.instance, 'patch').mockResolvedValue({
+      data: {
+        id: 2,
+        email: 'r@r.r',
+        displayName: 'U',
+        role: 'admin',
+        createdAt: '',
+        updatedAt: '',
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as never,
+    })
+
+    const res = await UsersApi.updateUserRole(2, { role: 'admin' })
+    expect(patchSpy).toHaveBeenCalledWith('/users/2/role', { role: 'admin' })
+    expect(res.userData.role).toBe('admin')
+  })
 })

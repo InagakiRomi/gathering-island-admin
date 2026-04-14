@@ -26,7 +26,7 @@ export class UsersListText {
     title: '用戶列表',
 
     /** 頁面副標題 */
-    subtitle: '管理用戶資料，支援註冊新帳號與修改名稱',
+    subtitle: '管理用戶資料，支援註冊新帳號、修改名稱與調整角色',
 
     /** 篩選區欄位標籤 */
     labels: {
@@ -44,6 +44,7 @@ export class UsersListText {
       search: '搜尋',
       create: '註冊帳號',
       edit: '修改名稱',
+      editRole: '修改角色',
       prevPage: TableText.TEXT.actions.prevPage,
       nextPage: TableText.TEXT.actions.nextPage,
     },

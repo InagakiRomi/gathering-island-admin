@@ -6,6 +6,7 @@ import {
   UsersEditForm,
   UsersHooks,
   UsersListText,
+  UsersRoleForm,
   type GetUsersQuery,
   type UserItem,
 } from '@/api/users'
@@ -95,6 +96,22 @@ const {
   submitEditForm,
   updateUserMutation,
 } = UsersEditForm.useEditUserForm()
+
+/** 管理員變更使用者角色 */
+const {
+  handleRoleDialogOpenChange,
+  handleRoleDialogValidationError,
+  isRoleDialogOpen,
+  isRoleErrorDialogOpen,
+  isRoleSuccessDialogOpen,
+  openRoleDialog,
+  roleDialogFields,
+  roleErrorDialogMessage,
+  roleErrorDialogTitle,
+  roleForm,
+  submitRoleForm,
+  updateUserRoleMutation,
+} = UsersRoleForm.useChangeUserRoleForm()
 
 /** 角色篩選 */
 function isMatchSelectedFilters(item: UserItem): boolean {
@@ -258,11 +275,18 @@ function handleErrorDialogOpenChange(value: boolean) {
                   {{ DateTime.format(String(user.updatedAt ?? '')) }}
                 </TableCell>
                 <TableCell class="text-center">
-                  <ActionButton
-                    :label="text.actions.edit"
-                    size="sm"
-                    @click="openEditDialog(user as unknown as UserItem)"
-                  />
+                  <div class="flex flex-wrap items-center justify-center gap-2">
+                    <ActionButton
+                      :label="text.actions.edit"
+                      size="sm"
+                      @click="openEditDialog(user as unknown as UserItem)"
+                    />
+                    <ActionButton
+                      :label="text.actions.editRole"
+                      size="sm"
+                      @click="openRoleDialog(user as unknown as UserItem)"
+                    />
+                  </div>
                 </TableCell>
               </template>
             </TableDataGrid>
@@ -319,6 +343,22 @@ function handleErrorDialogOpenChange(value: boolean) {
             title="更新成功"
             description="用戶名稱已更新。"
           />
+
+          <!-- 變更角色失敗提示 -->
+          <AlertDialog
+            v-model:open="isRoleErrorDialogOpen"
+            variant="error"
+            :title="roleErrorDialogTitle"
+            :description="roleErrorDialogMessage"
+          />
+
+          <!-- 變更角色成功提示 -->
+          <AlertDialog
+            v-model:open="isRoleSuccessDialogOpen"
+            variant="success"
+            title="更新成功"
+            description="使用者角色已更新。"
+          />
         </CardContent>
       </Card>
     </section>
@@ -349,6 +389,20 @@ function handleErrorDialogOpenChange(value: boolean) {
       @update:open="handleEditDialogOpenChange"
       @validation-error="handleEditDialogValidationError"
       @submit="submitEditForm"
+    />
+
+    <!-- 管理員變更使用者角色 -->
+    <EditDialog
+      :open="isRoleDialogOpen"
+      title="修改使用者角色"
+      subtitle="選擇一般使用者或管理員。不可將系統僅存的管理員降級。"
+      :fields="roleDialogFields"
+      :form="roleForm"
+      :is-submitting="updateUserRoleMutation.isPending.value"
+      :submit-label="{ idle: '儲存角色', submitting: '更新中...' }"
+      @update:open="handleRoleDialogOpenChange"
+      @validation-error="handleRoleDialogValidationError"
+      @submit="submitRoleForm"
     />
   </main>
 </template>

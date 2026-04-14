@@ -19,6 +19,14 @@ const USER_UPDATE_ERROR_CODE_MAP: UserErrorCodeMap = {
   NOT_FOUND: '找不到此使用者資料',
 }
 
+/** 使用者角色更新錯誤代碼對應中文 */
+const USER_ROLE_UPDATE_ERROR_CODE_MAP: UserErrorCodeMap = {
+  BAD_REQUEST: '無法變更角色（例如不可將最後一位管理員改為一般用戶），請確認後再試',
+  UNAUTHORIZED: '登入已失效，請重新登入',
+  FORBIDDEN: '管理者不能自己移除身分；若需調整角色，請由其他管理員操作。',
+  NOT_FOUND: '找不到此使用者資料',
+}
+
 /** 使用者頁錯誤訊息處理 */
 export class UserErrorMessages {
   /** 使用者列表讀取失敗彈窗標題 */
@@ -53,6 +61,16 @@ export class UserErrorMessages {
       USER_UPDATE_ERROR_CODE_MAP,
       UserErrorMessages.UPDATE_FAILED_MESSAGE,
       USER_UPDATE_ERROR_CODE_MAP.BAD_REQUEST,
+    )
+  }
+
+  /** 使用者角色更新錯誤：統一處理網路、狀態碼與錯誤代碼訊息 */
+  static toRoleUpdateErrorMessage(error: unknown): string {
+    return UserErrorMessages.toMappedFetchErrorMessage(
+      error,
+      USER_ROLE_UPDATE_ERROR_CODE_MAP,
+      UserErrorMessages.UPDATE_FAILED_MESSAGE,
+      USER_ROLE_UPDATE_ERROR_CODE_MAP.BAD_REQUEST,
     )
   }
 

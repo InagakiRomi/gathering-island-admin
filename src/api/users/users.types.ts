@@ -43,6 +43,11 @@ export interface UpdateUserPayload {
   displayName: string
 }
 
+/** 管理員更新使用者角色請求資料 */
+export interface UpdateUserRolePayload {
+  role: UserRole
+}
+
 /** 更新使用者名稱 API 回應結構 */
 export interface UpdateUserResponse {
   userData: UserItem

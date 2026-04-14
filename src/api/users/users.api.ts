@@ -5,6 +5,7 @@ import type {
   GetUsersResponse,
   UpdateUserPayload,
   UpdateUserResponse,
+  UpdateUserRolePayload,
   UserItem,
 } from './users.types'
 
@@ -84,6 +85,15 @@ export class UsersApi {
   /** 更新指定使用者 */
   static async updateUser(id: number, payload: UpdateUserPayload): Promise<UpdateUserResponse> {
     const { data } = await ApiClient.instance.patch<RawUserResponse>(`/users/${id}`, payload)
+    return { userData: UsersApi.toUserItem(data) }
+  }
+
+  /** 管理員更新指定使用者角色 */
+  static async updateUserRole(
+    id: number,
+    payload: UpdateUserRolePayload,
+  ): Promise<UpdateUserResponse> {
+    const { data } = await ApiClient.instance.patch<RawUserResponse>(`/users/${id}/role`, payload)
     return { userData: UsersApi.toUserItem(data) }
   }
 
