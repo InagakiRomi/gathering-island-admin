@@ -1,7 +1,8 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { defineConfig, loadEnv } from 'vite'
+import { loadEnv } from 'vite'
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
@@ -12,9 +13,20 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
+  const isVitest = process.env.VITEST === 'true'
+
   return {
     plugins: [
-      vue(),
+      vue(
+        isVitest
+          ? {
+              template: {
+                // 否則 <img src="/logo_title.svg"> 會被轉成 file:///…，在 Vitest 下觸發 Node 讀檔錯誤
+                transformAssetUrls: false,
+              },
+            }
+          : {},
+      ),
       tailwindcss(),
       vueDevTools({
         componentInspector: {
@@ -36,6 +48,12 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/backend/, ''),
         },
       } : undefined,
+    },
+    test: {
+      // jsdom 對 public 根路徑圖片較寬鬆；happy-dom 會把 /logo_title.svg 轉成 file:/// 讀檔而拋錯
+      environment: 'jsdom',
+      globals: false,
+      include: ['src/tests/**/*.test.ts'],
     },
   }
 })
