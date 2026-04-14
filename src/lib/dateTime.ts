@@ -10,6 +10,9 @@ const FORMAT_DATE_TIME = 'YYYY-MM-DD HH:mm:ss'
 /** ISO 8601 格式 */
 const FORMAT_DATE_TIME_LOCAL = 'YYYY-MM-DDTHH:mm:ss'
 
+/** 表單／驗證錯誤訊息用的可接受格式提示（須與 {@link DateTime} 解析一致） */
+export const DATE_TIME_ACCEPTED_FORMAT_HINT = `可接受的格式：${FORMAT_DATE_TIME} 或 ${FORMAT_DATE_TIME_LOCAL}。`
+
 /** 格式化模式 */
 export type DateTimeFormatMode = 'display' | 'input' | 'api'
 
@@ -75,5 +78,15 @@ export class DateTime {
 
     // 如果模式為 api，則返回原字串
     return text
+  }
+
+  /** 判斷日期時間 a 是否嚴格早於日期時間 b */
+  static isStrictlyBefore(a: string, b: string): boolean | null {
+    const first = DateTime.parseFlexibleDateTime(a.trim())
+    const second = DateTime.parseFlexibleDateTime(b.trim())
+    if (!first.isValid() || !second.isValid()) {
+      return null
+    }
+    return first.isBefore(second)
   }
 }

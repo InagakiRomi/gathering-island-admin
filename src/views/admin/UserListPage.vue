@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, watchEffect } from 'vue'
+import { AuthCreateForm } from '@/api/auth'
 import {
   UserErrorMessages,
-  UsersCreateForm,
   UsersEditForm,
   UsersHooks,
   UsersListText,
@@ -64,21 +64,21 @@ const { tableControls, sortBy, sortOrder, onFilterUpdate, onSortChange, isErrorD
 /** 載入全部用戶後，搜尋／角色／排序／分頁皆在前端套用 */
 const usersQuery = UsersHooks.useAllUsersQuery()
 
-/** 使用新增用戶表單 */
+/** 使用註冊帳號表單（POST /auth/register） */
 const {
   createForm,
   createDialogFields,
   createErrorDialogMessage,
   createErrorDialogTitle,
-  createUserMutation,
   handleCreateDialogOpenChange,
   handleCreateDialogValidationError,
   isCreateDialogOpen,
   isCreateErrorDialogOpen,
   isCreateSuccessDialogOpen,
   openCreateDialog,
+  registerMutation,
   submitCreateForm,
-} = UsersCreateForm.useCreateUserForm()
+} = AuthCreateForm.useRegisterForm()
 
 /** 使用編輯用戶名稱表單 */
 const {
@@ -288,7 +288,7 @@ function handleErrorDialogOpenChange(value: boolean) {
             @update:open="handleErrorDialogOpenChange"
           />
 
-          <!-- 新增用戶失敗提示 -->
+          <!-- 註冊帳號失敗提示 -->
           <AlertDialog
             v-model:open="isCreateErrorDialogOpen"
             variant="error"
@@ -296,12 +296,12 @@ function handleErrorDialogOpenChange(value: boolean) {
             :description="createErrorDialogMessage"
           />
 
-          <!-- 新增用戶成功提示 -->
+          <!-- 註冊帳號成功提示 -->
           <AlertDialog
             v-model:open="isCreateSuccessDialogOpen"
             variant="success"
-            title="新增成功"
-            description="用戶資料已建立完成。"
+            title="註冊成功"
+            description="新帳號已建立。"
           />
 
           <!-- 更新用戶失敗提示 -->
@@ -323,15 +323,15 @@ function handleErrorDialogOpenChange(value: boolean) {
       </Card>
     </section>
 
-    <!-- 新增用戶對話框 -->
+    <!-- 註冊帳號對話框 -->
     <EditDialog
       :open="isCreateDialogOpen"
-      title="新增用戶"
-      subtitle="請填寫建立用戶所需資訊"
+      title="註冊新帳號"
+      subtitle="請填寫 Email、密碼與顯示名稱以建立帳號"
       :fields="createDialogFields"
       :form="createForm"
-      :is-submitting="createUserMutation.isPending.value"
-      :submit-label="{ idle: '建立用戶', submitting: '建立中...' }"
+      :is-submitting="registerMutation.isPending.value"
+      :submit-label="{ idle: '建立帳號', submitting: '建立中...' }"
       @update:open="handleCreateDialogOpenChange"
       @validation-error="handleCreateDialogValidationError"
       @submit="submitCreateForm"

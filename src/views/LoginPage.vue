@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Field, useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
 import { useRouter } from 'vue-router'
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import AuthPageButton from '@/components/auth/AuthPageButton.vue'
@@ -12,17 +14,12 @@ import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
 import { AuthErrorMessages, AuthRole, useAuthLoginMutation } from '@/api/auth'
 import type { AuthLoginResponse } from '@/api/auth'
-
-/** 使用者輸入的電子郵件 */
-const email = ref('')
-
-/** 使用者輸入的密碼 */
-const password = ref('')
+import { AuthLoginSchema } from '@/validation/schemas/authLoginSchema'
 
 /** 是否顯示明文密碼 */
 const showPassword = ref(false)
 
-/** 錯誤訊息 */
+/** API／伺服器層錯誤訊息（與欄位驗證分開） */
 const errorMessage = ref('')
 
 /** 登入 mutation */
@@ -34,33 +31,24 @@ const router = useRouter()
 /** 是否正在送出登入請求 */
 const isSubmitting = computed(() => authLoginMutation.isPending.value)
 
-/** 處理登入表單送出 */
-function handleLogin() {
-  // 如果正在送出登入請求，則不允許重複送出
+const { handleSubmit } = useForm({
+  validationSchema: toTypedSchema(AuthLoginSchema.schema),
+  initialValues: {
+    email: '',
+    password: '',
+  },
+})
+
+/** 處理登入表單送出（欄位通過與後端 AuthLoginDto 對齊的 Zod 後才呼叫 API） */
+const onLoginSubmit = handleSubmit((values) => {
   if (isSubmitting.value) return
-
-  // 取得使用者輸入的電子郵件與密碼
-  const emailValue = email.value.trim()
-  const passwordValue = password.value.trim()
-
-  // 帳號為必填
-  if (!emailValue) {
-    errorMessage.value = '請輸入帳號'
-    return
-  }
-
-  // 密碼為必填
-  if (!passwordValue) {
-    errorMessage.value = '請輸入密碼'
-    return
-  }
 
   // 清空錯誤訊息
   errorMessage.value = ''
 
   // 呼叫登入 API
   authLoginMutation.mutate(
-    { email: emailValue, password: passwordValue },
+    { email: values.email.trim(), password: values.password },
     {
       onSuccess(result: AuthLoginResponse) {
         // 僅管理者可進入後台；一般帳號導向無權限說明頁
@@ -79,7 +67,7 @@ function handleLogin() {
       },
     },
   )
-}
+})
 </script>
 
 <template>
@@ -105,34 +93,52 @@ function handleLogin() {
         </CardHeader>
         <CardContent>
           <!-- 登入表單 -->
-          <form class="flex flex-col gap-5" @submit.prevent="handleLogin">
+          <form class="flex flex-col gap-5" @submit.prevent="onLoginSubmit">
             <!-- 電子郵件欄位 -->
             <div class="flex flex-col gap-1.5">
               <Label for="email" class="text-base">帳號</Label>
-              <Input id="email" v-model="email" autocomplete="email" />
+              <Field v-slot="{ field, errorMessage: fieldError }" name="email">
+                <Input
+                  id="email"
+                  :name="field.name"
+                  autocomplete="email"
+                  :model-value="field.value"
+                  :aria-invalid="fieldError ? true : undefined"
+                  @update:model-value="field.onChange"
+                  @blur="field.onBlur"
+                />
+                <p v-if="fieldError" class="text-sm text-destructive">{{ fieldError }}</p>
+              </Field>
             </div>
 
             <!-- 密碼欄位（含顯示/隱藏切換） -->
             <div class="flex flex-col gap-1.5">
               <Label for="password" class="text-base">密碼</Label>
-              <div class="relative">
-                <Input
-                  id="password"
-                  v-model="password"
-                  :type="showPassword ? 'text' : 'password'"
-                  autocomplete="current-password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-full px-2 text-muted-foreground hover:bg-sky-100/70 hover:text-sky-700 focus-visible:ring-sky-300/60"
-                  :aria-label="showPassword ? '隱藏密碼' : '顯示密碼'"
-                  @click="showPassword = !showPassword"
-                >
-                  <FontAwesomeIcon :icon="showPassword ? faEyeSlash : faEye" class="size-4" />
-                </Button>
-              </div>
+              <Field v-slot="{ field, errorMessage: fieldError }" name="password">
+                <div class="relative">
+                  <Input
+                    id="password"
+                    :name="field.name"
+                    :type="showPassword ? 'text' : 'password'"
+                    autocomplete="current-password"
+                    :model-value="field.value"
+                    :aria-invalid="fieldError ? true : undefined"
+                    @update:model-value="field.onChange"
+                    @blur="field.onBlur"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-full px-2 text-muted-foreground hover:bg-sky-100/70 hover:text-sky-700 focus-visible:ring-sky-300/60"
+                    :aria-label="showPassword ? '隱藏密碼' : '顯示密碼'"
+                    @click="showPassword = !showPassword"
+                  >
+                    <FontAwesomeIcon :icon="showPassword ? faEyeSlash : faEye" class="size-4" />
+                  </Button>
+                </div>
+                <p v-if="fieldError" class="text-sm text-destructive">{{ fieldError }}</p>
+              </Field>
             </div>
 
             <!-- 送出按鈕與錯誤訊息 -->

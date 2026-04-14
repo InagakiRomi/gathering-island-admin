@@ -1,4 +1,5 @@
 import { ApiClientError } from '@/api/apiClient'
+import type { ErrorPayload } from '@/api/apiErrors'
 import { DisplayText } from '@/lib/displayText'
 
 /** 登入錯誤代碼對應中文 */
@@ -13,9 +14,10 @@ const LOGIN_ERROR_CODE_MAP: Record<string, string> = {
 
 /** 註冊錯誤代碼對應中文 */
 const REGISTER_ERROR_CODE_MAP: Record<string, string> = {
+  BAD_REQUEST: '註冊資料格式錯誤，請確認欄位內容後再試',
+  UNAUTHORIZED: '登入已失效，請重新登入',
   CONFLICT: '此電子郵件已被註冊',
   VALIDATION_ERROR: '請檢查欄位格式',
-  BAD_REQUEST: '請檢查輸入資料',
   FORBIDDEN: '目前無法執行此操作',
   INTERNAL_SERVER_ERROR: '伺服器發生錯誤，請稍後再試',
 }
@@ -27,6 +29,9 @@ export class AuthErrorMessages {
 
   /** 註冊失敗時預設顯示的通知文字 */
   static readonly REGISTER_FAILED_MESSAGE = '註冊失敗，請稍後再試或等伺服器啟動後再試'
+
+  /** 註冊／新增帳號失敗彈窗標題 */
+  static readonly REGISTER_FAILED_TITLE = '註冊失敗'
 
   /** 登出失敗時預設顯示的通知文字 */
   static readonly LOGOUT_FAILED_MESSAGE = '登出失敗，請稍後再試或等伺服器啟動後再試'
@@ -54,6 +59,15 @@ export class AuthErrorMessages {
     return message ?? AuthErrorMessages.REGISTER_FAILED_MESSAGE
   }
 
+  /** 註冊 API（mutation）錯誤：統一處理網路、狀態碼與錯誤代碼訊息 */
+  static toRegisterMutationErrorMessage(error: unknown): string {
+    return AuthErrorMessages.toMappedRegisterErrorMessage(
+      error,
+      AuthErrorMessages.REGISTER_FAILED_MESSAGE,
+      REGISTER_ERROR_CODE_MAP.BAD_REQUEST,
+    )
+  }
+
   /** 登出錯誤：統一處理網路或後端錯誤訊息 */
   static toLogoutErrorMessage(error: unknown): string {
     // 如果不是 ApiClientError 實例，則返回預設錯誤訊息
@@ -71,5 +85,37 @@ export class AuthErrorMessages {
       return AuthErrorMessages.BACKEND_UNAVAILABLE_MESSAGE
 
     return error.message ?? AuthErrorMessages.LOGOUT_FAILED_MESSAGE
+  }
+
+  private static toMappedRegisterErrorMessage(
+    error: unknown,
+    fallbackMessage: string,
+    badRequestMessage?: string,
+  ): string {
+    if (!(error instanceof ApiClientError)) {
+      return fallbackMessage
+    }
+
+    if (
+      error.status === 500 ||
+      error.status === undefined ||
+      error.message.includes('Network Error') ||
+      error.message.includes('Failed to fetch')
+    ) {
+      return AuthErrorMessages.BACKEND_UNAVAILABLE_MESSAGE
+    }
+
+    const payload = error.data as ErrorPayload | undefined
+    const normalizedCode = DisplayText.normalizeErrorCode(payload?.code)
+
+    if (normalizedCode && REGISTER_ERROR_CODE_MAP[normalizedCode]) {
+      return REGISTER_ERROR_CODE_MAP[normalizedCode]
+    }
+
+    if (error.status === 400 && badRequestMessage) {
+      return badRequestMessage
+    }
+
+    return error.message || fallbackMessage
   }
 }

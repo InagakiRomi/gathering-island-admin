@@ -275,6 +275,12 @@ function handleSubmit() {
           <!-- 依欄位設定動態產生表單列。 -->
           <div v-for="field in props.fields" :key="field.key" class="space-y-1.5">
             <Label :for="`edit-dialog-${field.key}`">{{ field.label }}</Label>
+            <p
+              v-if="field.hint"
+              class="text-xs leading-relaxed text-muted-foreground dark:text-blue-100/75"
+            >
+              {{ field.hint }}
+            </p>
 
             <!-- select 欄位走選單元件分支 -->
             <Select

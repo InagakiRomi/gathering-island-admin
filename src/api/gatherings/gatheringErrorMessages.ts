@@ -27,7 +27,7 @@ const GATHERING_PARTICIPANTS_ERROR_CODE_MAP: GatheringErrorCodeMap = {
 
 /** 活動新增錯誤代碼對應中文 */
 const GATHERING_CREATE_ERROR_CODE_MAP: GatheringErrorCodeMap = {
-  BAD_REQUEST: '新增活動資料格式錯誤，請確認欄位內容後再試',
+  BAD_REQUEST: '新增活動資料格式錯誤，請確認時間、名額、費用等欄位內容後再試',
   UNAUTHORIZED: '登入已失效，請重新登入',
 }
 
@@ -144,8 +144,8 @@ export class GatheringErrorMessages {
       return GatheringErrorMessages.BACKEND_UNAVAILABLE_MESSAGE
     }
 
-    // 標準化錯誤代碼
     const payload = error.data as ErrorPayload | undefined
+
     const normalizedCode = DisplayText.normalizeErrorCode(payload?.code)
 
     // 如果錯誤代碼存在，則返回對應的錯誤訊息
@@ -157,7 +157,6 @@ export class GatheringErrorMessages {
       return badRequestMessage
     }
 
-    // 如果錯誤代碼不存在，則返回預設的錯誤訊息
     return error.message || fallbackMessage
   }
 }

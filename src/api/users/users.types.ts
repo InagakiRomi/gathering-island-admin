@@ -38,18 +38,6 @@ export interface GetUsersResponse {
   total: number
 }
 
-/** 新增使用者請求資料（使用 /auth/register） */
-export interface CreateUserPayload {
-  email: string
-  password: string
-  displayName: string
-}
-
-/** 新增使用者 API 回應結構 */
-export interface CreateUserResponse {
-  userData: UserItem
-}
-
 /** 更新使用者名稱請求資料 */
 export interface UpdateUserPayload {
   displayName: string

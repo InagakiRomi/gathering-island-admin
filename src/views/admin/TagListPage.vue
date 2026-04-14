@@ -64,6 +64,7 @@ const {
   createErrorDialogTitle,
   createSuccessDialogDescription,
   createSuccessDialogTitle,
+  createSuccessDialogVariant,
   createTagMutation,
   handleCreateDialogOpenChange,
   handleCreateDialogValidationError,
@@ -248,7 +249,7 @@ function handleErrorDialogOpenChange(isOpen: boolean) {
           <!-- 新增標籤成功時的成功彈窗 -->
           <AlertDialog
             v-model:open="isCreateSuccessDialogOpen"
-            variant="success"
+            :variant="createSuccessDialogVariant"
             :title="createSuccessDialogTitle"
             :description="createSuccessDialogDescription"
           />

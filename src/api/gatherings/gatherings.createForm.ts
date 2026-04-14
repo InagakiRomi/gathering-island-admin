@@ -1,11 +1,12 @@
 import { computed, reactive, ref } from 'vue'
-import { DateTime } from '@/lib/dateTime'
-import { NormalizeStringArray } from '@/lib/normalizeStringArray'
 import type {
   EditDialogField,
   EditDialogFormValue,
   EditDialogValidationError,
 } from '@/types/editDialog'
+import { DATE_TIME_ACCEPTED_FORMAT_HINT } from '@/lib/dateTime'
+import { GatheringLimits } from '@/validation/gatheringLimits'
+import { CreateGatheringFormSchema } from '@/validation/schemas/createGatheringFormSchema'
 import { GatheringErrorMessages } from './gatheringErrorMessages'
 import { GatheringsMutations } from './gatherings.mutations'
 import { GatheringsListText } from './gatherings.text'
@@ -35,6 +36,19 @@ const DATETIME_FIELD = 'datetime-local' as const
 
 /** 欄位格式錯誤彈窗標題 */
 const FIELD_FORMAT_ERROR_TITLE = '欄位格式錯誤'
+
+/**
+ * 活動表單欄位備註（標題／描述／地點／類型刻意省略，其餘欄位保留說明）。
+ */
+export const GatheringFormFieldHints = {
+  participantNumbers: `必填；須為 ${GatheringLimits.PARTICIPANT_NUMBERS.MIN}～${GatheringLimits.PARTICIPANT_NUMBERS.MAX} 的整數（不可為小數）。`,
+  price: `必填；可填 0 表示免費；範圍 ${GatheringLimits.PRICE.MIN}～${GatheringLimits.PRICE.MAX}。`,
+  /** 活動開始時間（新增表單） */
+  startTime: `必填；請填活動實際開場時間，且須晚於報名截止時間。不可以早於現在時間。`,
+  /** 報名截止時間（新增或編輯表單；編輯時無法改動活動開始時間） */
+  deadline: `必填；請填停止接受報名的時間，且須早於活動開始時間。不可以早於現在時間。`,
+  tags: '選填；輸入後按 Enter 新增標籤',
+} as const
 
 export class GatheringsCreateForm {
   /** 使用新增活動表單 */
@@ -70,15 +84,30 @@ export class GatheringsCreateForm {
 
     /** 新增活動對話框欄位設定 */
     const createDialogFields = computed<EditDialogField[]>(() => [
-      { key: 'title', label: '活動標題', type: TEXT_FIELD, required: true },
-      { key: 'description', label: '活動描述', type: TEXT_FIELD },
-      { key: 'location', label: '活動地點', type: TEXT_FIELD, required: true },
+      {
+        key: 'title',
+        label: '活動標題',
+        type: TEXT_FIELD,
+        required: true,
+      },
+      {
+        key: 'description',
+        label: '活動描述',
+        type: TEXT_FIELD,
+      },
+      {
+        key: 'location',
+        label: '活動地點',
+        type: TEXT_FIELD,
+        required: true,
+      },
       {
         key: 'participantNumbers',
         label: '活動名額',
         type: TEXT_FIELD,
         required: true,
         placeholder: '請輸入正整數（例如：20）',
+        hint: GatheringFormFieldHints.participantNumbers,
       },
       {
         key: 'price',
@@ -86,6 +115,7 @@ export class GatheringsCreateForm {
         type: TEXT_FIELD,
         required: true,
         placeholder: '請輸入數字（例如：300）',
+        hint: GatheringFormFieldHints.price,
       },
       {
         key: 'type',
@@ -98,12 +128,14 @@ export class GatheringsCreateForm {
         label: '活動開始時間',
         type: DATETIME_FIELD,
         required: true,
+        hint: GatheringFormFieldHints.startTime,
       },
       {
         key: 'deadline',
         label: '報名截止時間',
         type: DATETIME_FIELD,
         required: true,
+        hint: GatheringFormFieldHints.deadline,
       },
       {
         key: 'tags',
@@ -111,6 +143,7 @@ export class GatheringsCreateForm {
         type: TEXT_FIELD,
         valueType: 'array' as const,
         placeholder: '輸入標籤後按 Enter 新增（例如：桌遊）',
+        hint: GatheringFormFieldHints.tags,
       },
     ])
 
@@ -140,49 +173,16 @@ export class GatheringsCreateForm {
       isCreateErrorDialogOpen.value = true
     }
 
-    /** 將表單值轉成 API payload，並集中處理欄位格式驗證 */
+    /** 將表單值轉成 API payload */
     function toCreateGatheringPayload(
       formValues: Record<string, EditDialogFormValue>,
     ): CreateGatheringPayload | null {
-      const title = String(formValues.title ?? '').trim()
-      const description = String(formValues.description ?? '').trim()
-      const location = String(formValues.location ?? '').trim()
-      const type = String(formValues.type ?? 'OTHER') as GatheringType
-      const participantNumbersRaw = String(formValues.participantNumbers ?? '').trim()
-      const priceRaw = String(formValues.price ?? '').trim()
-      const startTimeRaw = String(formValues.startTime ?? '')
-      const deadlineRaw = String(formValues.deadline ?? '')
-
-      const participantNumbers = Number(participantNumbersRaw)
-      if (!Number.isInteger(participantNumbers) || participantNumbers <= 0) {
-        openCreateErrorDialog('活動名額必須為正整數。', FIELD_FORMAT_ERROR_TITLE)
+      const parsed = CreateGatheringFormSchema.parse(formValues)
+      if (!parsed.ok) {
+        openCreateErrorDialog(parsed.message, FIELD_FORMAT_ERROR_TITLE)
         return null
       }
-
-      const price = Number(priceRaw)
-      if (!Number.isFinite(price) || price < 0) {
-        openCreateErrorDialog('活動費用必須為 0 或更大的數字。', FIELD_FORMAT_ERROR_TITLE)
-        return null
-      }
-
-      const startTime = DateTime.format(startTimeRaw, 'api')
-      const deadline = DateTime.format(deadlineRaw, 'api')
-      if (!startTime || !deadline) {
-        openCreateErrorDialog('請填寫有效的活動開始與報名截止時間。', FIELD_FORMAT_ERROR_TITLE)
-        return null
-      }
-
-      return {
-        title,
-        description: description || undefined,
-        location,
-        participantNumbers,
-        price,
-        type: type as GatheringType,
-        startTime,
-        deadline,
-        tags: NormalizeStringArray.toStringArray(formValues.tags ?? []),
-      }
+      return parsed.payload
     }
 
     /** 處理新增活動對話框錯誤驗證 */

@@ -5,6 +5,19 @@ import { GatheringsApi } from './gatherings.api'
 import type { GetGatheringsQuery } from './gatherings.types'
 
 export class GatheringsHooks {
+  /** 依篩選／搜尋拉齊全部活動，供列表頁在前端排序／分頁 */
+  static useAllGatheringsQuery(query: Ref<Omit<GetGatheringsQuery, 'page' | 'limit' | 'sortBy' | 'sortOrder'>>) {
+    const queryKey = computed(() => QueryKeys.gatherings.listAll(query.value))
+    const queryFn = () => GatheringsApi.getAllGatherings(query.value)
+
+    return useQuery({
+      queryKey,
+      queryFn,
+      placeholderData: keepPreviousData,
+      staleTime: 1000 * 30,
+    })
+  }
+
   /** 活動列表查詢 Hook */
   static useGatheringsQuery(query: Ref<GetGatheringsQuery>) {
     const queryKey = computed(() => QueryKeys.gatherings.list(query.value))

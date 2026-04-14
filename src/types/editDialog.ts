@@ -33,6 +33,7 @@ export type EditDialogField = {
   required?: boolean
   valueType?: EditDialogFieldValueType
   placeholder?: string
+  hint?: string
   options?: EditDialogSelectOption[]
 }
 

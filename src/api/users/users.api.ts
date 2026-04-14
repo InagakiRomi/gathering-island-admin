@@ -1,23 +1,12 @@
 import { ApiClient } from '../apiClient'
+import type { AuthRegisterResponse } from '../auth/auth.types'
 import type {
-  CreateUserPayload,
-  CreateUserResponse,
   GetUsersQuery,
   GetUsersResponse,
   UpdateUserPayload,
   UpdateUserResponse,
   UserItem,
 } from './users.types'
-
-/** 註冊 API 回傳的 JWT 內容 */
-type JwtPayloadResponse = {
-  sub: number
-  email: string
-  username: string
-  role: 'user' | 'admin'
-  createdAt: string
-  updatedAt: string
-}
 
 /** 一般使用者欄位 */
 type UserEntityResponse = {
@@ -29,8 +18,8 @@ type UserEntityResponse = {
   updatedAt: string
 }
 
-/** 單筆使用者：可能是 JWT 或一般實體 */
-type RawUserResponse = JwtPayloadResponse | UserEntityResponse
+/** 單筆使用者：可能是註冊回傳（sub）或一般實體 */
+type RawUserResponse = AuthRegisterResponse | UserEntityResponse
 
 /** GET /users 原始回應（items 即列表） */
 type RawGetUsersResponse = {
@@ -58,8 +47,21 @@ export class UsersApi {
 
   /** 拉整份列表（由前端自己做篩選／排序／分頁） */
   static async getAllUsers(): Promise<UserItem[]> {
-    const res = await UsersApi.getUsers({})
-    return res.userData
+    const limit = 500
+    const items: UserItem[] = []
+    let page = 1
+    const maxPages = 10_000
+
+    while (page <= maxPages) {
+      const res = await UsersApi.getUsers({ page, limit })
+      items.push(...res.userData)
+      if (res.userData.length === 0 || res.userData.length < limit) {
+        break
+      }
+      page += 1
+    }
+
+    return items
   }
 
   /** 取得單一使用者 /users/:id */
@@ -77,12 +79,6 @@ export class UsersApi {
     }
 
     return UsersApi.toUserItem(data as RawUserResponse)
-  }
-
-  /** 新增使用者（走註冊端點） */
-  static async createUser(payload: CreateUserPayload): Promise<CreateUserResponse> {
-    const { data } = await ApiClient.instance.post<JwtPayloadResponse>('/auth/register', payload)
-    return { userData: UsersApi.toUserItem(data) }
   }
 
   /** 更新指定使用者 */

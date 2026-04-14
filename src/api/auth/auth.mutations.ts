@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { QueryKeys } from '../queryKeys'
 import { AuthStore } from '@/stores/auth'
 import { AuthApi } from './auth.api'
+import type { AuthRegisterRequest } from './auth.types'
 
 /** 提供登入 mutation */
 export function useAuthLoginMutation() {
@@ -20,9 +21,14 @@ export function useAuthLoginMutation() {
 
 /** 提供註冊 mutation */
 export function useAuthRegisterMutation() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationKey: QueryKeys.auth.register(),
-    mutationFn: AuthApi.authRegister,
+    mutationFn: (payload: AuthRegisterRequest) => AuthApi.authRegister(payload),
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: QueryKeys.users.all })
+    },
   })
 }
 

@@ -4,11 +4,11 @@ import { RouterLink, useRoute } from 'vue-router'
 import { ArrowLeft, Users } from 'lucide-vue-next'
 import {
   GatheringErrorMessages,
+  GatheringFormFieldHints,
   GatheringsHooks,
   GatheringsListText,
   GatheringsMutations,
   type GatheringType,
-  type UpdateGatheringPayload,
 } from '@/api/gatherings'
 import { UsersHooks } from '@/api/users'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -28,6 +28,7 @@ import { useEntityDialogs } from '@/composables/useEntityDialogs'
 import { DateTime } from '@/lib/dateTime'
 import { DisplayText } from '@/lib/displayText'
 import { NormalizeStringArray } from '@/lib/normalizeStringArray'
+import { UpdateGatheringFormSchema } from '@/validation/schemas/updateGatheringFormSchema'
 import { TableDisplay } from '@/lib/tableDisplay'
 import { WatchErrorTransition } from '@/lib/watchErrorTransition'
 import type {
@@ -242,8 +243,18 @@ const gatheringTypeOptions = computed(() =>
 
 /** 編輯欄位設定（可重用於不同編輯頁） */
 const editDialogFields = computed<EditDialogField[]>(() => [
-  { key: 'description', label: '活動描述', type: 'text' as const, required: true },
-  { key: 'location', label: '活動地點', type: 'text' as const, required: true },
+  {
+    key: 'description',
+    label: '活動描述',
+    type: 'text' as const,
+    required: true,
+  },
+  {
+    key: 'location',
+    label: '活動地點',
+    type: 'text' as const,
+    required: true,
+  },
   {
     key: 'type',
     label: '活動類型',
@@ -255,6 +266,7 @@ const editDialogFields = computed<EditDialogField[]>(() => [
     label: '報名截止時間',
     type: 'datetime-local' as const,
     required: true,
+    hint: GatheringFormFieldHints.deadline,
   },
   {
     key: 'tags',
@@ -262,6 +274,7 @@ const editDialogFields = computed<EditDialogField[]>(() => [
     type: 'text' as const,
     valueType: 'array' as const,
     placeholder: '輸入標籤後按 Enter 新增（例如：桌遊）',
+    hint: GatheringFormFieldHints.tags,
   },
 ])
 
@@ -410,23 +423,6 @@ function openEditDialog() {
   openEditDialogState()
 }
 
-/** 將表單值轉成後端 payload 格式 */
-function toUpdateGatheringPayload(
-  formValues: Record<string, EditDialogFormValue>,
-): UpdateGatheringPayload {
-  const description = typeof formValues.description === 'string' ? formValues.description : ''
-  const location = typeof formValues.location === 'string' ? formValues.location : ''
-  const type = typeof formValues.type === 'string' ? formValues.type : 'OTHER'
-  const deadline = typeof formValues.deadline === 'string' ? formValues.deadline : ''
-  return {
-    description: description.trim(),
-    location: location.trim(),
-    type: type as GatheringType,
-    deadline: deadline ? DateTime.format(deadline, 'api') : undefined,
-    tags: NormalizeStringArray.toStringArray(formValues.tags ?? []),
-  }
-}
-
 /** 編輯彈窗必填驗證失敗時顯示提示 */
 function handleEditDialogValidationError(error: EditDialogValidationError) {
   openUpdateError({
@@ -441,14 +437,24 @@ function submitEditForm(formValues: Record<string, EditDialogFormValue>) {
   if (!gathering.value) {
     return
   }
-  // 將表單值轉成後端 UpdateGatheringDto payload
-  const payload = toUpdateGatheringPayload(formValues)
+
+  // 解析表單資料
+  const parsed = UpdateGatheringFormSchema.parse(formValues, {
+    eventStartTime: gathering.value.startTime,
+  })
+  if (!parsed.ok) {
+    openUpdateError({
+      title: '欄位格式錯誤',
+      message: parsed.message,
+    })
+    return
+  }
 
   // 更新活動
   updateGatheringMutation.mutate(
     {
       id: gathering.value.id,
-      payload,
+      payload: parsed.payload,
     },
     {
       // 成功時

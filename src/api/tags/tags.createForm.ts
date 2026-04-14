@@ -9,6 +9,8 @@ import { QueryKeys } from '../queryKeys'
 import { TagErrorMessages } from '@/api/tags/tagErrorMessages'
 import { TagsMutations } from './tags.mutations'
 import { TagsListText } from './tags.text'
+import { CreateTagSchema } from '@/validation/schemas/createTagSchema'
+import { ZodFirstIssueMessage } from '@/validation/zodFirstIssueMessage'
 import type { CreateTagPayload, TagItem } from './tags.types'
 
 /** 新增對話框一開始的欄位內容 */
@@ -53,6 +55,9 @@ export class TagsCreateForm {
 
     const createSuccessDialogDescription = ref('')
 
+    /** 與 `AlertDialog` 的 `variant` 對齊：沿用既有標籤用 error 色、新建用 success */
+    const createSuccessDialogVariant = ref<'error' | 'success'>('success')
+
     /** 表單模型（可與對話框綁定） */
     const createForm = reactive({ ...DEFAULT_FORM })
 
@@ -84,18 +89,18 @@ export class TagsCreateForm {
       isCreateErrorDialogOpen.value = true
     }
 
-    /** 把對話框輸入轉成 API payload；缺欄位就開錯誤窗並回傳 null */
+    /** 把對話框輸入轉成 API payload */
     function toCreateTagPayload(
       formValues: Record<string, EditDialogFormValue>,
     ): CreateTagPayload | null {
-      const tagName = String(formValues.tagName ?? '').trim()
-
-      if (!tagName) {
-        openCreateErrorDialog('請填寫標籤名稱。', FIELD_FORMAT_ERROR_TITLE)
+      const parsed = CreateTagSchema.schema.safeParse({
+        tagName: String(formValues.tagName ?? '').trim(),
+      })
+      if (!parsed.success) {
+        openCreateErrorDialog(ZodFirstIssueMessage.first(parsed.error), FIELD_FORMAT_ERROR_TITLE)
         return null
       }
-
-      return { tagName }
+      return { tagName: parsed.data.tagName }
     }
 
     /** EditDialog 內建驗證失敗時，把訊息丟進錯誤彈窗 */
@@ -123,12 +128,14 @@ export class TagsCreateForm {
             isCreateDialogOpen.value = false
 
             if (existingBeforeSubmit) {
+              createSuccessDialogVariant.value = 'error'
               createSuccessDialogTitle.value = createSuccessCopy.existsTitle
               createSuccessDialogDescription.value = createSuccessCopy.existsDescription(
                 created.id,
                 created.tagName,
               )
             } else {
+              createSuccessDialogVariant.value = 'success'
               createSuccessDialogTitle.value = createSuccessCopy.newTitle
               createSuccessDialogDescription.value = createSuccessCopy.newDescription
             }
@@ -155,6 +162,7 @@ export class TagsCreateForm {
       isCreateSuccessDialogOpen,
       createSuccessDialogTitle,
       createSuccessDialogDescription,
+      createSuccessDialogVariant,
       openCreateDialog,
       submitCreateForm,
     }

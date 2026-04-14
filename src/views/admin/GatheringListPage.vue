@@ -7,6 +7,7 @@ import {
   GatheringsHooks,
   GatheringsListText,
   type GatheringItem,
+  type GatheringSortBy,
   type GetGatheringsQuery,
 } from '@/api/gatherings'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -39,11 +40,7 @@ const useGatheringListStore = SeriesListStoreFactory.createStore<
 >({
   storeId: 'gatheringList',
   filterKeys,
-  buildQueryParams: ({ page, limit, searchKeyword, filters }) => ({
-    page,
-    limit,
-    sortBy: 'id',
-    sortOrder: 'DESC',
+  buildQueryParams: ({ searchKeyword, filters }) => ({
     search: searchKeyword || undefined,
     status: GatheringsGuards.isStatus(filters.status) ? filters.status : undefined,
     type: GatheringsGuards.isType(filters.type) ? filters.type : undefined,
@@ -70,23 +67,17 @@ const tableColumns = [
 ]
 
 /** 統一管理列表頁常見狀態：搜尋、篩選、排序、分頁與錯誤彈窗 */
-const {
-  tableControls,
-  sortBy,
-  sortOrder,
-  queryParamsWithSort,
-  onFilterUpdate,
-  onSortChange,
-  isErrorDialogOpen,
-} = useListPageController(gatheringListStore, {
-  filterKeys,
-  defaultSortBy: 'id',
-  defaultSortOrder: 'DESC',
-  unsortableKeys: ['actions'],
-})
+const { tableControls, sortBy, sortOrder, onFilterUpdate, onSortChange, isErrorDialogOpen } =
+  useListPageController(gatheringListStore, {
+    filterKeys,
+    defaultSortBy: 'id',
+    defaultSortOrder: 'DESC',
+    unsortableKeys: ['actions'],
+  })
 
-/** 活動列表查詢 */
-const gatheringsQuery = GatheringsHooks.useGatheringsQuery(queryParamsWithSort)
+/** 依搜尋／篩選拉齊全部活動後，再由前端排序與分頁 */
+const gatheringsFetchParams = computed(() => gatheringListStore.queryParams)
+const gatheringsQuery = GatheringsHooks.useAllGatheringsQuery(gatheringsFetchParams)
 
 /** 使用新增活動表單 */
 const {
@@ -127,12 +118,67 @@ function isMatchSelectedFilters(item: GatheringItem): boolean {
   return true
 }
 
-/** 目前頁面要顯示的活動資料 */
-const gatheringRows = computed<Record<string, unknown>[]>(() => {
-  const items = gatheringsQuery.data.value?.gatheringData ?? []
+/** 表頭排序（整份資料已載入，於前端排序） */
+function compareGatheringsForSort(
+  first: GatheringItem,
+  second: GatheringItem,
+  key: GatheringSortBy,
+  order: 'ASC' | 'DESC',
+): number {
+  const dir = order === 'ASC' ? 1 : -1
+
+  if (key === 'id') {
+    return (first.id - second.id) * dir
+  }
+
+  if (key === 'type') {
+    return first.type.localeCompare(second.type) * dir
+  }
+
+  if (key === 'status') {
+    return first.status.localeCompare(second.status) * dir
+  }
+
+  if (key === 'startTime') {
+    return first.startTime.localeCompare(second.startTime) * dir
+  }
+
+  if (key === 'deadline') {
+    return first.deadline.localeCompare(second.deadline) * dir
+  }
+
+  if (key === 'participantNumbers') {
+    return (first.participantNumbers - second.participantNumbers) * dir
+  }
+
+  if (key === 'price') {
+    return (first.price - second.price) * dir
+  }
+
+  if (key === 'createdAt') {
+    return first.createdAt.localeCompare(second.createdAt) * dir
+  }
+
+  return 0
+}
+
+/** 依條件處理後的完整列表（供總筆數與分頁切片） */
+const filteredSortedGatherings = computed(() => {
+  const items = gatheringsQuery.data.value ?? []
 
   return items
     .filter((item) => isMatchSelectedFilters(item))
+    .sort((a, b) => compareGatheringsForSort(a, b, sortBy.value, sortOrder.value))
+})
+
+/** 目前頁面要顯示的活動資料 */
+const gatheringRows = computed<Record<string, unknown>[]>(() => {
+  const page = tableControls.page.value
+  const limit = tableControls.limit.value
+  const start = (page - 1) * limit
+
+  return filteredSortedGatherings.value
+    .slice(start, start + limit)
     .map((item: GatheringItem): Record<string, unknown> => ({ ...item }))
 })
 
@@ -159,8 +205,11 @@ const filterControls = computed<TableFilterControl[]>(() => [
 ])
 
 watchEffect(() => {
-  // 當查詢結果更新時，同步更新分頁器的總筆數
-  tableControls.setTotal(gatheringsQuery.data.value?.total ?? 0)
+  const count = filteredSortedGatherings.value.length
+  tableControls.setTotal(count)
+  if (tableControls.page.value > tableControls.totalPages.value) {
+    tableControls.setPage(tableControls.totalPages.value)
+  }
 })
 
 /** 監聽錯誤狀態 */

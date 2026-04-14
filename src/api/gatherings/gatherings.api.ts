@@ -1,6 +1,7 @@
 import { ApiClient } from '../apiClient'
 import type { UserItem } from '../users/users.types'
 import type {
+  GatheringItem,
   GetGatheringsQuery,
   GetGatheringsResponse,
   GetGatheringByIdResponse,
@@ -55,6 +56,33 @@ export class GatheringsApi {
       params: GatheringsApi.buildGatheringsQueryParams(query),
     })
     return data
+  }
+
+  /** 分頁串接拉齊全部活動（同一組篩選／搜尋條件；排序由前端處理） */
+  static async getAllGatherings(
+    query: Omit<GetGatheringsQuery, 'page' | 'limit' | 'sortBy' | 'sortOrder'>,
+  ): Promise<GatheringItem[]> {
+    const limit = 500
+    const items: GatheringItem[] = []
+    let page = 1
+    const maxPages = 10_000
+
+    while (page <= maxPages) {
+      const res = await GatheringsApi.getGatherings({
+        ...query,
+        page,
+        limit,
+        sortBy: 'id',
+        sortOrder: 'ASC',
+      })
+      items.push(...res.gatheringData)
+      if (res.gatheringData.length === 0 || res.gatheringData.length < limit) {
+        break
+      }
+      page += 1
+    }
+
+    return items
   }
 
   /** 取得單一活動資料 /gatherings/:id */

@@ -17,8 +17,15 @@ export type AuthLoginResponse = {
 export type AuthRegisterRequest = {
   email: string
   password: string
-  role: string
+  displayName: string
 }
 
-/** 註冊成功時後端回傳的回應 */
-export type AuthRegisterResponse = Record<string, unknown>
+/** POST /auth/register 成功時回傳的使用者欄位 */
+export type AuthRegisterResponse = {
+  sub: number
+  email: string
+  username: string
+  role: 'user' | 'admin'
+  createdAt: string
+  updatedAt: string
+}

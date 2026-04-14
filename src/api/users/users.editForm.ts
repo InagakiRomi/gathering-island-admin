@@ -6,6 +6,8 @@ import type {
 } from '@/types/editDialog'
 import { UserErrorMessages } from './userErrorMessages'
 import { UsersMutations } from './users.mutations'
+import { UpdateUserDisplayNameSchema } from '@/validation/schemas/updateUserDisplayNameSchema'
+import { ZodFirstIssueMessage } from '@/validation/zodFirstIssueMessage'
 import type { UserItem } from './users.types'
 
 /** 編輯用戶名稱彈窗的初始表單狀態 */
@@ -75,16 +77,18 @@ export class UsersEditForm {
         return
       }
 
-      const displayName = String(formValues.displayName ?? '').trim()
-      if (!displayName) {
-        openEditErrorDialog('請填寫名稱。', FIELD_FORMAT_ERROR_TITLE)
+      const parsed = UpdateUserDisplayNameSchema.schema.safeParse({
+        displayName: String(formValues.displayName ?? '').trim(),
+      })
+      if (!parsed.success) {
+        openEditErrorDialog(ZodFirstIssueMessage.first(parsed.error), FIELD_FORMAT_ERROR_TITLE)
         return
       }
 
       updateUserMutation.mutate(
         {
           id: editingUserId.value,
-          payload: { displayName },
+          payload: { displayName: parsed.data.displayName },
         },
         {
           onSuccess: () => {

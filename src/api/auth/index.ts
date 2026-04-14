@@ -1,7 +1,8 @@
-export { AuthApi } from './auth.api'
+export { AuthCreateForm } from './auth.createForm'
 export { useAuthLoginMutation, useAuthLogoutMutation, useAuthRegisterMutation } from './auth.mutations'
 export { AuthErrorMessages } from './authErrorMessages'
 export { AuthRole } from './authRole'
+export { AuthApi } from './auth.api'
 export type {
   AuthLoginPayload,
   AuthLoginRequest,

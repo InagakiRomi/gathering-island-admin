@@ -8,7 +8,7 @@ import StatCard from '@/components/common/StatCard.vue'
 const totalGatheringsQuery = GatheringsHooks.useGatheringsQuery(
   computed<GetGatheringsQuery>(() => ({
     page: 1,
-    limit: 10,
+    limit: 1,
   })),
 )
 </script>
