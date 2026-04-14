@@ -25,6 +25,7 @@ export class TagsListText {
     table: {
       id: 'ID',
       tagName: '標籤名稱',
+      usageCount: '使用次數',
     },
 
     states: {

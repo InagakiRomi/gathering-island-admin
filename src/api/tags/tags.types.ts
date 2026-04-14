@@ -2,10 +2,12 @@
 export interface TagItem {
   id: number
   tagName: string
+  /** 被活動引用次數（GET /tags 有回傳；POST 建立時無） */
+  usageCount?: number
 }
 
 /** 標籤列表排序欄位 */
-export type TagSortBy = 'id' | 'tagName'
+export type TagSortBy = 'id' | 'tagName' | 'usageCount'
 
 /** 標籤列表排序方向 */
 export type TagSortOrder = 'ASC' | 'DESC'

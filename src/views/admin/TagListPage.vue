@@ -41,6 +41,7 @@ const tagListStore = useTagListStore()
 const tableColumns = [
   { key: 'id', label: text.table.id, sortable: true },
   { key: 'tagName', label: text.table.tagName, sortable: true },
+  { key: 'usageCount', label: text.table.usageCount, sortable: true },
 ]
 
 /** 表格控制、排序與（空）篩選事件；與 tagListStore 同步總筆數 */
@@ -74,25 +75,41 @@ const {
 } = TagsCreateForm.useCreateTagForm()
 
 /** 關鍵字比對標籤名稱（不分大小寫） */
-function matchesSearchKeyword(item: TagItem, keyword: string): boolean {
-  const normalized = keyword.trim().toLowerCase()
-  if (!normalized) {
+function matchesSearchKeyword(tag: TagItem, keyword: string): boolean {
+  const normalizedKeyword = keyword.trim().toLowerCase()
+  if (!normalizedKeyword) {
     return true
   }
 
-  return item.tagName.toLowerCase().includes(normalized)
+  return tag.tagName.toLowerCase().includes(normalizedKeyword)
 }
 
 /** 依目前 sortBy／sortOrder 比較兩筆標籤（id 數值、名稱用 zh-Hant） */
-function compareTagsForSort(a: TagItem, b: TagItem, key: string, order: 'ASC' | 'DESC'): number {
-  const dir = order === 'ASC' ? 1 : -1
+function compareTagsForSort(
+  firstTag: TagItem,
+  secondTag: TagItem,
+  sortColumnKey: string,
+  order: 'ASC' | 'DESC',
+): number {
+  const sortDirectionMultiplier = order === 'ASC' ? 1 : -1
 
-  if (key === 'id') {
-    return (a.id - b.id) * dir
+  if (sortColumnKey === 'id') {
+    return (firstTag.id - secondTag.id) * sortDirectionMultiplier
   }
 
-  if (key === 'tagName') {
-    return a.tagName.localeCompare(b.tagName, 'zh-Hant') * dir
+  if (sortColumnKey === 'tagName') {
+    return (
+      firstTag.tagName.localeCompare(secondTag.tagName, 'zh-Hant') * sortDirectionMultiplier
+    )
+  }
+
+  if (sortColumnKey === 'usageCount') {
+    const firstUsageCount = firstTag.usageCount ?? 0
+    const secondUsageCount = secondTag.usageCount ?? 0
+    if (firstUsageCount !== secondUsageCount) {
+      return (firstUsageCount - secondUsageCount) * sortDirectionMultiplier
+    }
+    return (firstTag.id - secondTag.id) * sortDirectionMultiplier
   }
 
   return 0
@@ -104,8 +121,10 @@ const filteredSortedTags = computed(() => {
   const items = tagsQuery.data.value ?? []
 
   return items
-    .filter((item) => matchesSearchKeyword(item, keyword))
-    .sort((a, b) => compareTagsForSort(a, b, sortBy.value, sortOrder.value))
+    .filter((tag) => matchesSearchKeyword(tag, keyword))
+    .sort((firstTag, secondTag) =>
+      compareTagsForSort(firstTag, secondTag, sortBy.value, sortOrder.value),
+    )
 })
 
 /** 目前頁要顯示的列（轉成 Record 以配合 TableDataGrid） */
@@ -115,7 +134,7 @@ const tagRows = computed<Record<string, unknown>[]>(() => {
   const start = (page - 1) * limit
   return filteredSortedTags.value
     .slice(start, start + limit)
-    .map((item): Record<string, unknown> => ({ ...item }))
+    .map((tag): Record<string, unknown> => ({ ...tag }))
 })
 
 /** 本頁無額外篩選器；TableFilterControls 仍接收空陣列 */
@@ -138,8 +157,8 @@ WatchErrorTransition.watch(
 )
 
 /** 列表載入失敗時與 store 錯誤彈窗連動 */
-function handleErrorDialogOpenChange(value: boolean) {
-  if (value) {
+function handleErrorDialogOpenChange(isOpen: boolean) {
+  if (isOpen) {
     tagListStore.openErrorDialog()
     return
   }
@@ -191,6 +210,9 @@ function handleErrorDialogOpenChange(value: boolean) {
                   <span class="inline-block max-w-full truncate align-middle">
                     {{ DisplayText.getDisplayText(String(tag.tagName ?? '-')) }}
                   </span>
+                </TableCell>
+                <TableCell class="text-center tabular-nums">
+                  {{ Number(tag.usageCount ?? 0) }}
                 </TableCell>
               </template>
             </TableDataGrid>
