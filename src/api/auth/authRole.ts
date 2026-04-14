@@ -14,6 +14,16 @@ export class AuthRoleError extends Error {
 
 /** 將認證資訊轉為可顯示於 UI 的角色名稱 */
 export class AuthRole {
+  /** 判斷 token 是否為後台管理者（admin） */
+  static isAdmin(accessToken: string | null) {
+    if (!accessToken) return false
+
+    const payload = AuthRole.decodeJwtPayload(accessToken)
+    if (!payload || typeof payload.role !== 'string') return false
+
+    return payload.role.trim().toLowerCase() === 'admin'
+  }
+
   /** 由 access token 解析適合顯示在 UI 的角色名稱 */
   static fromAccessToken(accessToken: string | null) {
     // 沒有 token 代表目前無法判斷角色，交由呼叫端統一處理錯誤訊息

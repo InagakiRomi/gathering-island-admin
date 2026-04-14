@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
-import { AuthErrorMessages, useAuthLoginMutation } from '@/api/auth'
+import { AuthErrorMessages, AuthRole, useAuthLoginMutation } from '@/api/auth'
+import type { AuthLoginResponse } from '@/api/auth'
 
 /** 使用者輸入的電子郵件 */
 const email = ref('')
@@ -61,9 +62,10 @@ function handleLogin() {
   authLoginMutation.mutate(
     { email: emailValue, password: passwordValue },
     {
-      onSuccess() {
-        // 登入成功後導向後台主頁
-        void router.push('/admin/dashboard')
+      onSuccess(result: AuthLoginResponse) {
+        // 僅管理者可進入後台；一般帳號導向無權限說明頁
+        const path = AuthRole.isAdmin(result.accessToken) ? '/admin/dashboard' : '/access-denied'
+        void router.push(path)
       },
       onError(error: unknown) {
         if (!(error instanceof ApiClientError)) {
