@@ -20,4 +20,9 @@ export class TagsApi {
     const { data } = await ApiClient.instance.post<TagItem>('/tags', payload)
     return data
   }
+
+  /** 刪除標籤 /tags/:id */
+  static async deleteTag(id: number): Promise<void> {
+    await ApiClient.instance.delete(`/tags/${id}`)
+  }
 }

@@ -46,4 +46,17 @@ describe('TagsApi', () => {
     expect(post).toHaveBeenCalledWith('/tags', { tagName: '新' })
     expect(created.tagName).toBe('新')
   })
+
+  it('deleteTag 呼叫 DELETE /tags/:id', async () => {
+    const del = vi.spyOn(ApiClient.instance, 'delete').mockResolvedValue({
+      data: undefined,
+      status: 204,
+      statusText: 'No Content',
+      headers: {},
+      config: {} as never,
+    })
+
+    await TagsApi.deleteTag(7)
+    expect(del).toHaveBeenCalledWith('/tags/7')
+  })
 })

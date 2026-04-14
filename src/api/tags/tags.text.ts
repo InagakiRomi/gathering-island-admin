@@ -18,6 +18,7 @@ export class TagsListText {
     actions: {
       search: '搜尋',
       create: '新增標籤',
+      delete: '刪除',
       prevPage: TableText.TEXT.actions.prevPage,
       nextPage: TableText.TEXT.actions.nextPage,
     },
@@ -25,7 +26,21 @@ export class TagsListText {
     table: {
       id: 'ID',
       tagName: '標籤名稱',
-      usageCount: '使用次數',
+      usageCount: '使用統計',
+      actions: '操作',
+    },
+
+    /** 刪除標籤確認與錯誤 */
+    deleteConfirm: {
+      title: '確認刪除標籤',
+      description: (name: string) => `確定要刪除標籤「${name}」嗎？此操作無法復原。`,
+      confirmLabel: '確認刪除',
+    },
+
+    /** 刪除標籤成功 */
+    deleteSuccess: {
+      title: '標籤已刪除',
+      description: (name: string) => `標籤「${name}」已成功刪除。`,
     },
 
     states: {

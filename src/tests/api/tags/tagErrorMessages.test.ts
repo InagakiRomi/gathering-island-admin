@@ -19,4 +19,27 @@ describe('TagErrorMessages', () => {
   it('非 ApiClientError', () => {
     expect(TagErrorMessages.toCreateErrorMessage(null)).toBe(TagErrorMessages.CREATE_FAILED_MESSAGE)
   })
+
+  it('toDeleteErrorMessage：NOT_FOUND', () => {
+    const err = new ApiClientError('m', 404, { code: 'NOT_FOUND' })
+    expect(TagErrorMessages.toDeleteErrorMessage(err)).toBe('找不到此標籤，可能已被刪除')
+  })
+
+  it('toDeleteErrorMessage：CONFLICT（後端標籤仍被聚會引用）', () => {
+    const err = new ApiClientError('m', 409, { code: 'CONFLICT' })
+    expect(TagErrorMessages.toDeleteErrorMessage(err)).toBe(
+      '無法刪除此標籤，僅有使用統計為 0 的標籤可以刪除。',
+    )
+  })
+
+  it('toDeleteErrorMessage：HTTP 409 無 code 時仍回傳與 CONFLICT 相同說明', () => {
+    const err = new ApiClientError('Conflict', 409, {})
+    expect(TagErrorMessages.toDeleteErrorMessage(err)).toBe(
+      '無法刪除此標籤，僅有使用統計為 0 的標籤可以刪除。',
+    )
+  })
+
+  it('toDeleteErrorMessage：非 ApiClientError 使用通用後備訊息', () => {
+    expect(TagErrorMessages.toDeleteErrorMessage(undefined)).toBe(TagErrorMessages.DELETE_FAILED_MESSAGE)
+  })
 })
