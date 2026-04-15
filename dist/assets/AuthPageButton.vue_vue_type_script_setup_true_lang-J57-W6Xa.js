@@ -1,1 +1,0 @@
-import{_ as t}from"./index-DiuLjefF.js";import{e as s,P as a,G as r,S as o,u as n,v as c,z as i}from"./index-BHzdvrtS.js";const l=s({__name:"AuthPageButton",setup(_){return(e,m)=>(c(),a(n(t),o(e.$attrs,{size:"lg",class:"mt-2.5 text-base bg-cyan-600 text-white hover:bg-cyan-500 focus-visible:ring-cyan-500/20"}),{default:r(()=>[i(e.$slots,"default")]),_:3},16))}});export{l as _};

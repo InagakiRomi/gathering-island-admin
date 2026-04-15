@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
   const isVitest = process.env.VITEST === 'true'
 
   return {
-    base: '/gathering-island-admin',
+    base: '/gathering-island-admin/',
     plugins: [
       vue(
         isVitest
