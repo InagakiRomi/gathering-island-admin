@@ -133,12 +133,7 @@ const chartItems = computed(() => {
   <Card class="gap-0 py-0 shadow-sm">
     <!-- 卡片標題區 -->
     <CardHeader class="px-5 pb-0 pt-4">
-      <div
-        :class="[
-          'flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2',
-          headerClass,
-        ]"
-      >
+      <div :class="['flex items-center gap-3 rounded-lg px-3 py-2', headerClass || 'bg-muted/50']">
         <div
           v-if="icon"
           :class="[
