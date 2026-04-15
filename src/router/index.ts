@@ -1,12 +1,22 @@
-import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
+import {
+  createRouter,
+  createWebHashHistory,
+  createWebHistory,
+  type RouteLocationNormalized,
+} from 'vue-router'
 import { AuthRole } from '@/api/auth'
 import { AuthStore } from '@/stores/auth'
 import { PiniaStore } from '@/stores/pinia'
 import { resolveRouteGuardRedirect } from '@/router/routeGuard'
 
 /** 全站路由設定 */
+const history =
+  import.meta.env.PROD
+    ? createWebHashHistory(import.meta.env.BASE_URL)
+    : createWebHistory(import.meta.env.BASE_URL)
+
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history,
   routes: [
     {
       path: '/',
