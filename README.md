@@ -88,3 +88,26 @@ npm run test:run
 super@test.com
 123
 ```
+
+---
+
+## 介面展示
+
+### 登入介面
+<img src="https://github.com/user-attachments/assets/24f43c89-70a9-440d-bf88-7edc8b2b9166" width="840"/>
+<img src="https://github.com/user-attachments/assets/f192fad5-1f9c-4f12-aa73-da70a7b8218f" width="840"/>
+
+### 儀板表
+<img src="https://github.com/user-attachments/assets/74637de1-ddef-43ad-bf54-397205c9397b" width="840"/>
+<img src="https://github.com/user-attachments/assets/af22b9ad-df6e-4258-9b58-68caf4553269" width="840"/>
+
+### 活動介面
+<img src="https://github.com/user-attachments/assets/1b823c86-956a-45a3-9d27-c666286cae02" width="840"/>
+<img src="https://github.com/user-attachments/assets/6017ac26-bad6-4b3d-a3dd-aaf9fa02492d" width="840"/>
+
+### 使用者介面
+<img src="https://github.com/user-attachments/assets/9d049660-ef0c-4fd1-ba1c-433e6363938d" width="840"/>
+<img src="https://github.com/user-attachments/assets/9fb807a9-bdb2-42de-8a51-94218d52d351" width="840"/>
+
+### 標籤介面
+<img src="https://github.com/user-attachments/assets/de20b3ab-8beb-43cc-8d6d-c713fabd69df" width="840"/>
