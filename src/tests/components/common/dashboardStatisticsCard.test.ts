@@ -1,7 +1,15 @@
 import { mount } from '@vue/test-utils'
+import { h } from 'vue'
 import { describe, expect, it } from 'vitest'
 
 import DashboardStatisticsCard from '@/components/common/DashboardStatisticsCard.vue'
+
+const TestIcon = {
+  name: 'TestIcon',
+  render() {
+    return h('svg')
+  },
+}
 
 describe('DashboardStatisticsCard', () => {
   it('顯示標題與數值', () => {
@@ -9,7 +17,7 @@ describe('DashboardStatisticsCard', () => {
       props: {
         title: '總數',
         value: 42,
-        statTheme: 'users',
+        icon: TestIcon,
       },
     })
     expect(wrapper.text()).toContain('總數')
@@ -21,7 +29,7 @@ describe('DashboardStatisticsCard', () => {
       props: {
         title: '載入',
         value: 99,
-        statTheme: 'admin',
+        icon: TestIcon,
         isLoading: true,
         loadingText: '…',
       },
@@ -30,12 +38,12 @@ describe('DashboardStatisticsCard', () => {
     expect(wrapper.text()).not.toContain('99')
   })
 
-  it('依 statTheme 顯示左側圖示（SVG）', () => {
+  it('會顯示左側圖示（SVG）', () => {
     const wrapper = mount(DashboardStatisticsCard, {
       props: {
         title: '標籤',
         value: 0,
-        statTheme: 'tags',
+        icon: TestIcon,
       },
     })
     expect(wrapper.find('svg').exists()).toBe(true)

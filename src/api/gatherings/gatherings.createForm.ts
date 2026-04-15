@@ -4,7 +4,6 @@ import type {
   EditDialogFormValue,
   EditDialogValidationError,
 } from '@/types/editDialog'
-import { DATE_TIME_ACCEPTED_FORMAT_HINT } from '@/lib/dateTime'
 import { GatheringLimits } from '@/validation/gatheringLimits'
 import { CreateGatheringFormSchema } from '@/validation/schemas/createGatheringFormSchema'
 import { GatheringErrorMessages } from './gatheringErrorMessages'
