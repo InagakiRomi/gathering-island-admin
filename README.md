@@ -2,7 +2,7 @@
 
 **Gathering Island（聚會島）管理後台** 供 **管理員** 在瀏覽器中維運使用者、聚會活動與標籤。以 **Vue 3 + TypeScript + Vite** 實作，透過 REST API 與後端通訊；一般使用者與公開探索流程由其他客戶端負責，本專案僅涵蓋需 **admin** 角色的後台功能。
 
-後端 GitHub 路徑見 [gathering-island-backend](https://github.com/InagakiRomi/gathering-island-backend)
+[點此進入後台](https://inagakiromi.github.io/gathering-island-admin/)
 
 ---
 
