@@ -513,7 +513,7 @@ const profileItems = computed(() => {
           <div v-else-if="user" class="space-y-6">
             <!-- 主資訊 -->
             <section
-              class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-muted/20 p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
+              class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-white p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
             >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-2">

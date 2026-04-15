@@ -23,7 +23,7 @@ import BarChartCard from '@/components/common/BarChartCard.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import DashboardStatisticsCard from '@/components/common/DashboardStatisticsCard.vue'
 import PieChartCard from '@/components/common/PieChartCard.vue'
-import { Card, CardHeader } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { GatheringTypeSchema } from '@/validation/gatheringTypeSchema'
 
 ChartJS.register(
@@ -282,52 +282,62 @@ const dashboardStatCards = computed(() => [
 <!-- 功能名稱：管理後台儀表板 -->
 <template>
   <main class="space-y-4">
-    <!-- 功能名稱：頁首標題區 -->
+    <!-- 功能名稱：儀表板總覽卡（標題 + KPI + 圖表） -->
     <section>
       <Card>
         <CardHeader>
           <CardSectionTitle title="儀表板" subtitle="查看目前各項資料統計" />
         </CardHeader>
+        <CardContent class="space-y-4">
+          <!-- 功能名稱：關鍵指標統計卡 -->
+          <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <DashboardStatisticsCard
+              v-for="card in dashboardStatCards"
+              :key="card.title"
+              :title="card.title"
+              :icon="card.icon"
+              :icon-wrap-class="card.iconWrapClass"
+              :value="card.value"
+              :variant="card.variant"
+              :is-loading="card.isLoading"
+            />
+          </section>
+
+          <!-- 功能名稱：圖表區（活動狀態／類型／線上與已刪除） -->
+          <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <!-- 圓餅圖：活動狀態分佈 -->
+            <PieChartCard
+              title="活動狀態（報名中 / 即將開始 / 已結束）"
+              :icon="CalendarDays"
+              header-class="bg-sky-500/10 text-sky-900 dark:bg-sky-400/15 dark:text-sky-100"
+              icon-wrap-class="bg-sky-500/15 text-sky-700 dark:bg-sky-300/20 dark:text-sky-100"
+              :data="activityMainPieChartData"
+              :is-loading="isStatusPieLoading"
+            />
+
+            <!-- 長條圖：活動類型數量 -->
+            <BarChartCard
+              title="活動類型分佈（數量）"
+              :icon="Tags"
+              header-class="bg-violet-500/10 text-violet-900 dark:bg-violet-400/15 dark:text-violet-100"
+              icon-wrap-class="bg-violet-500/15 text-violet-700 dark:bg-violet-300/20 dark:text-violet-100"
+              :data="gatheringTypeBarChartData"
+              :options="gatheringTypeBarChartOptions"
+              :is-loading="isTypeBarLoading"
+            />
+
+            <!-- 圓餅圖：線上與已刪除比例 -->
+            <PieChartCard
+              title="活動上架狀態（線上 / 已刪除）"
+              :icon="Users"
+              header-class="bg-emerald-500/10 text-emerald-900 dark:bg-emerald-400/15 dark:text-emerald-100"
+              icon-wrap-class="bg-emerald-500/15 text-emerald-700 dark:bg-emerald-300/20 dark:text-emerald-100"
+              :data="archiveStatusPieChartData"
+              :is-loading="isArchivePieLoading"
+            />
+          </section>
+        </CardContent>
       </Card>
-    </section>
-
-    <!-- 功能名稱：關鍵指標統計卡 -->
-    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      <DashboardStatisticsCard
-        v-for="card in dashboardStatCards"
-        :key="card.title"
-        :title="card.title"
-        :icon="card.icon"
-        :icon-wrap-class="card.iconWrapClass"
-        :value="card.value"
-        :variant="card.variant"
-        :is-loading="card.isLoading"
-      />
-    </section>
-
-    <!-- 功能名稱：圖表區（活動狀態／類型／線上與已刪除） -->
-    <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-      <!-- 圓餅圖：活動狀態分佈 -->
-      <PieChartCard
-        title="報名中 / 即將開始 / 已結束"
-        :data="activityMainPieChartData"
-        :is-loading="isStatusPieLoading"
-      />
-
-      <!-- 長條圖：活動類型數量 -->
-      <BarChartCard
-        title="依活動類型（數量）"
-        :data="gatheringTypeBarChartData"
-        :options="gatheringTypeBarChartOptions"
-        :is-loading="isTypeBarLoading"
-      />
-
-      <!-- 圓餅圖：線上與已刪除比例 -->
-      <PieChartCard
-        title="線上 / 已刪除"
-        :data="archiveStatusPieChartData"
-        :is-loading="isArchivePieLoading"
-      />
     </section>
   </main>
 </template>

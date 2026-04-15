@@ -315,9 +315,6 @@ const creatorNameLine = computed(() => {
   if (creatorUserQuery.isPending.value && !creatorUserQuery.data.value) {
     return '載入建立者資料中…'
   }
-  if (creatorUserQuery.isError.value && !creatorUserQuery.data.value) {
-    return '無法載入建立者'
-  }
   const creator = creatorUserQuery.data.value
   if (creator) {
     return DisplayText.getDisplayText(creator.displayName)
@@ -331,16 +328,8 @@ const creatorEmailLine = computed(() => {
   if (email) {
     return email
   }
-  if (creatorUserQuery.isError.value) {
-    return '名稱與信箱無法顯示，請確認後端或權限設定'
-  }
   return ''
 })
-
-/** 建立者異常狀態 */
-const isCreatorPanelWarning = computed(
-  () => creatorUserQuery.isError.value && !creatorUserQuery.data.value,
-)
 
 /** 系統資訊 */
 const systemItems = computed(() => {
@@ -588,7 +577,7 @@ function submitGatheringAction() {
 
             <!-- 主資訊 -->
             <section
-              class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-muted/20 p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
+              class="space-y-4 rounded-xl border border-[rgb(186_230_253/0.9)] bg-white p-4 sm:p-5 dark:border-[rgb(56_189_248/0.4)]"
             >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="space-y-2">
@@ -655,21 +644,11 @@ function submitGatheringAction() {
               <!-- 建立者 -->
               <RouterLink
                 :to="`/admin/users/${gathering.userId}`"
-                class="lg:col-span-2 flex cursor-pointer flex-col gap-4 rounded-xl border p-4 text-inherit no-underline shadow-sm outline-offset-2 transition-colors sm:flex-row sm:items-center sm:gap-5 sm:p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 dark:focus-visible:ring-sky-500/60"
-                :class="
-                  isCreatorPanelWarning
-                    ? 'border-amber-300/80 bg-linear-to-br from-amber-50/90 to-white/80 hover:border-amber-400/90 dark:border-amber-600/40 dark:from-amber-950/35 dark:to-slate-900/80 dark:hover:border-amber-500/55'
-                    : 'border-sky-200/90 bg-linear-to-br from-sky-50/50 via-white/90 to-white hover:border-sky-300/90 dark:border-sky-500/25 dark:from-sky-950/25 dark:via-slate-900/85 dark:to-slate-950/90 dark:hover:border-sky-400/40'
-                "
+                class="lg:col-span-2 flex cursor-pointer flex-col gap-4 rounded-xl border border-sky-200/90 bg-sky-50/70 p-4 text-inherit no-underline shadow-sm outline-offset-2 transition-colors hover:border-sky-300/90 hover:bg-sky-100/95 sm:flex-row sm:items-center sm:gap-5 sm:p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 dark:border-sky-500/25 dark:bg-sky-950/18 dark:hover:border-sky-400/40 dark:hover:bg-sky-900/35 dark:focus-visible:ring-sky-500/60"
                 :aria-label="`前往建立者使用者詳細頁面（ID ${gathering.userId}）`"
               >
                 <div
-                  class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold tracking-tight shadow-sm"
-                  :class="
-                    isCreatorPanelWarning
-                      ? 'border-amber-200/90 bg-amber-100/90 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/50 dark:text-amber-100'
-                      : 'border-sky-200/80 bg-sky-100/90 text-sky-900 dark:border-sky-700/50 dark:bg-sky-900/45 dark:text-sky-50'
-                  "
+                  class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-sky-200/80 bg-sky-100/90 text-sm font-semibold tracking-tight text-sky-900 shadow-sm dark:border-sky-700/50 dark:bg-sky-900/45 dark:text-sky-50"
                   aria-hidden="true"
                 >
                   {{ creatorInitials }}

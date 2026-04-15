@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import { Pie } from 'vue-chartjs'
 import {
   ArcElement,
@@ -20,6 +20,9 @@ ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels)
 const props = withDefaults(
   defineProps<{
     title: string
+    icon?: Component
+    headerClass?: string
+    iconWrapClass?: string
     data: ChartData<'pie'>
     isLoading?: boolean
     options?: ChartOptions<'pie'>
@@ -29,6 +32,8 @@ const props = withDefaults(
     isLoading: false,
     heightClass: 'h-72',
     options: undefined,
+    headerClass: '',
+    iconWrapClass: '',
   },
 )
 
@@ -128,7 +133,24 @@ const chartItems = computed(() => {
   <Card class="gap-0 py-0 shadow-sm">
     <!-- 卡片標題區 -->
     <CardHeader class="px-5 pb-0 pt-4">
-      <CardDescription class="text-sm font-medium">{{ title }}</CardDescription>
+      <div
+        :class="[
+          'flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2',
+          headerClass,
+        ]"
+      >
+        <div
+          v-if="icon"
+          :class="[
+            'flex size-8 shrink-0 items-center justify-center rounded-md bg-background text-muted-foreground',
+            iconWrapClass,
+          ]"
+          aria-hidden="true"
+        >
+          <component :is="icon" class="size-4" stroke-width="2" />
+        </div>
+        <CardDescription class="text-sm font-medium text-foreground">{{ title }}</CardDescription>
+      </div>
     </CardHeader>
     <CardContent class="px-5 pb-5 pt-3">
       <!-- 圖表主體：載入中顯示 Skeleton，完成後顯示圓餅圖 -->
