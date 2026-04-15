@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TableCell } from '@/components/ui/table'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEntityDialogs } from '@/composables/useEntityDialogs'
 import { DateTime } from '@/lib/dateTime'
 import { DisplayText } from '@/lib/displayText'
@@ -47,6 +48,8 @@ const gatheringDetailQuery = GatheringsHooks.useGatheringByIdQuery(gatheringId)
 
 /** 參與者彈窗 */
 const isParticipantsDialogOpen = ref(false)
+
+useBodyScrollLock(() => isParticipantsDialogOpen.value)
 
 watch(gatheringId, () => {
   isParticipantsDialogOpen.value = false
@@ -771,7 +774,7 @@ function submitGatheringAction() {
     <!-- 參與者彈窗 -->
     <section
       v-if="isParticipantsDialogOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50 px-4 py-4 backdrop-blur-[2px] sm:py-6"
+      class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/60 px-4 py-4 sm:py-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="participants-dialog-title"
@@ -835,7 +838,7 @@ function submitGatheringAction() {
         </div>
 
         <footer
-          class="shrink-0 flex justify-end gap-2 border-t border-slate-200/80 bg-background/95 px-5 py-4 backdrop-blur supports-backdrop-filter:bg-background/80 dark:border-blue-800/80 dark:bg-blue-950/70 sm:px-6"
+          class="shrink-0 flex justify-end gap-2 border-t border-slate-200/80 bg-background px-5 py-4 dark:border-blue-800/80 dark:bg-blue-950/70 sm:px-6"
         >
           <ActionButton label="關閉" type="button" @click="closeParticipantsDialog" />
         </footer>

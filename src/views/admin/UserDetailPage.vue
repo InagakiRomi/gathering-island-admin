@@ -1,15 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, watchEffect } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { ArrowLeft } from 'lucide-vue-next'
-import {
-  GatheringErrorMessages,
-  GatheringsGuards,
-  GatheringsListText,
-  type GatheringItem,
-  type GatheringSortBy,
-  type GetGatheringsQuery,
-} from '@/api/gatherings'
+import { GatheringsListText, type GetGatheringsQuery } from '@/api/gatherings'
 import {
   UserErrorMessages,
   UsersEditForm,
@@ -22,25 +15,22 @@ import ActionButton from '@/components/common/ActionButton.vue'
 import AlertDialog from '@/components/common/AlertDialog.vue'
 import CardSectionTitle from '@/components/common/CardSectionTitle.vue'
 import EditDialog from '@/components/common/EditDialog.vue'
-import GatheringTableSection from '@/components/common/GatheringTableSection.vue'
+import GatheringStatusBadge from '@/components/common/GatheringStatusBadge.vue'
 import NotebookInfoCard from '@/components/common/NotebookInfoCard.vue'
 import SingleInfoCard from '@/components/common/SingleInfoCard.vue'
-import type { TableFilterControl } from '@/components/table/TableFilterControls.vue'
+import TableDataGrid from '@/components/table/TableDataGrid.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { TableCell } from '@/components/ui/table'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEntityDialogs } from '@/composables/useEntityDialogs'
-import { useListPageController } from '@/composables/useListPageController'
 import { DateTime } from '@/lib/dateTime'
 import { DisplayText } from '@/lib/displayText'
 import { TableDisplay } from '@/lib/tableDisplay'
 import { WatchErrorTransition } from '@/lib/watchErrorTransition'
-import { SeriesListStoreFactory, type BuildSeriesListQueryParamsContext } from '@/stores/seriesList'
 
 const route = useRoute()
-
-/** 頁面文案 */
-const listText = GatheringsListText.TEXT
 
 /** 路由參數 */
 const userIdArg = computed(() => {
@@ -75,325 +65,66 @@ WatchErrorTransition.watch(
   },
 )
 
-const filterKeys = ['status', 'type', 'isArchived'] as const
-type GatheringFilterKey = (typeof filterKeys)[number]
+const gatheringListFetchParams = computed<GetGatheringsQuery>(() => ({}))
 
-/** 列表查詢參數 */
-function buildGatheringListQueryParams({
-  searchKeyword,
-  filters,
-}: BuildSeriesListQueryParamsContext<GatheringFilterKey>): GetGatheringsQuery {
-  return {
-    search: searchKeyword || undefined,
-    status: GatheringsGuards.isStatus(filters.status) ? filters.status : undefined,
-    type: GatheringsGuards.isType(filters.type) ? filters.type : undefined,
-    isArchived:
-      filters.isArchived === 'true' ? true : filters.isArchived === 'false' ? false : undefined,
-  }
-}
-
-const useCreatedGatheringListStore = SeriesListStoreFactory.createStore<
-  GatheringFilterKey,
-  GetGatheringsQuery
->({
-  storeId: 'userDetailCreatedGatherings',
-  filterKeys,
-  buildQueryParams: buildGatheringListQueryParams,
-})
-
-const useParticipatedGatheringListStore = SeriesListStoreFactory.createStore<
-  GatheringFilterKey,
-  GetGatheringsQuery
->({
-  storeId: 'userDetailParticipatedGatherings',
-  filterKeys,
-  buildQueryParams: buildGatheringListQueryParams,
-})
-
-const createdGatheringListStore = useCreatedGatheringListStore()
-const participatedGatheringListStore = useParticipatedGatheringListStore()
-
-/** 建立活動表格控制 */
-const createdTable = useListPageController(createdGatheringListStore, {
-  filterKeys,
-  defaultSortBy: 'id',
-  defaultSortOrder: 'DESC',
-  unsortableKeys: ['actions'],
-})
-
-/** 參加活動表格控制 */
-const participatedTable = useListPageController(participatedGatheringListStore, {
-  filterKeys,
-  defaultSortBy: 'id',
-  defaultSortOrder: 'DESC',
-  unsortableKeys: ['actions'],
-})
-
-const {
-  tableControls: createdUi,
-  sortBy: createdSortBy,
-  sortOrder: createdSortOrder,
-  onFilterUpdate: onCreatedFilterUpdate,
-  onSortChange: onCreatedSortChange,
-} = createdTable
-
-const {
-  tableControls: participatedUi,
-  sortBy: participatedSortBy,
-  sortOrder: participatedSortOrder,
-  onFilterUpdate: onParticipatedFilterUpdate,
-  onSortChange: onParticipatedSortChange,
-} = participatedTable
-
-const createdFetchParams = computed(() => createdGatheringListStore.queryParams)
-const participatedFetchParams = computed(() => participatedGatheringListStore.queryParams)
-
-const createdGatheringsQuery = UsersHooks.useUserCreatedGatheringsAllQuery(userIdArg, createdFetchParams)
+const createdGatheringsQuery = UsersHooks.useUserCreatedGatheringsAllQuery(
+  userIdArg,
+  gatheringListFetchParams,
+)
 const participatedGatheringsQuery = UsersHooks.useUserParticipatedGatheringsAllQuery(
   userIdArg,
-  participatedFetchParams,
+  gatheringListFetchParams,
 )
 
-/** 活動欄位 */
-const gatheringTableColumns = [
-  { key: 'id', label: listText.table.id, sortable: true },
-  { key: 'title', label: listText.table.title, sortable: false },
-  { key: 'type', label: listText.table.type, sortable: true },
-  { key: 'status', label: listText.table.status, sortable: true },
-  { key: 'location', label: listText.table.location, sortable: false },
-  { key: 'startTime', label: listText.table.startTime, sortable: true },
-  { key: 'deadline', label: listText.table.deadline, sortable: true },
-  { key: 'participantNumbers', label: listText.table.participantNumbers, sortable: true },
-  { key: 'price', label: listText.table.price, sortable: true },
-  { key: 'actions', label: listText.table.actions, sortable: false },
+const createdGatheringsCount = computed(() => (createdGatheringsQuery.data.value ?? []).length)
+const participatedGatheringsCount = computed(() => (participatedGatheringsQuery.data.value ?? []).length)
+
+const gatheringDialogColumns = [
+  { key: 'id', label: 'ID', sortable: false as const },
+  { key: 'title', label: '標題', sortable: false as const },
+  { key: 'type', label: '類型', sortable: false as const },
+  { key: 'status', label: '狀態', sortable: false as const },
 ]
 
-/** 篩選條件 */
-function isMatchSelectedFilters(item: GatheringItem, filters: Record<string, string>): boolean {
-  const { status, type, isArchived } = filters
+const isGatheringsDialogOpen = ref(false)
+const activeGatheringsDialogType = ref<'created' | 'participated'>('created')
 
-  if (status && item.status !== status) {
-    return false
-  }
+useBodyScrollLock(() => isGatheringsDialogOpen.value)
 
-  if (type && item.type !== type) {
-    return false
-  }
-
-  if (isArchived === 'true' && item.isArchived !== true) {
-    return false
-  }
-
-  if (isArchived === 'false' && item.isArchived !== false) {
-    return false
-  }
-
-  return true
+/** 開啟建立活動列表 */
+function openCreatedGatheringsDialog() {
+  activeGatheringsDialogType.value = 'created'
+  isGatheringsDialogOpen.value = true
 }
 
-/** 關鍵字搜尋 */
-function matchesGatheringSearch(item: GatheringItem, keyword: string): boolean {
-  const normalized = keyword.trim().toLowerCase()
-  if (!normalized) {
-    return true
-  }
-
-  return (
-    item.title.toLowerCase().includes(normalized) ||
-    item.location.toLowerCase().includes(normalized) ||
-    item.description.toLowerCase().includes(normalized)
-  )
+/** 開啟參加活動列表 */
+function openParticipatedGatheringsDialog() {
+  activeGatheringsDialogType.value = 'participated'
+  isGatheringsDialogOpen.value = true
 }
 
-/** 活動排序 */
-function compareGatheringsForSort(
-  first: GatheringItem,
-  second: GatheringItem,
-  key: GatheringSortBy,
-  order: 'ASC' | 'DESC',
-): number {
-  const dir = order === 'ASC' ? 1 : -1
-
-  if (key === 'id') {
-    return (first.id - second.id) * dir
-  }
-
-  if (key === 'type') {
-    return first.type.localeCompare(second.type) * dir
-  }
-
-  if (key === 'status') {
-    return first.status.localeCompare(second.status) * dir
-  }
-
-  if (key === 'startTime') {
-    return first.startTime.localeCompare(second.startTime) * dir
-  }
-
-  if (key === 'deadline') {
-    return first.deadline.localeCompare(second.deadline) * dir
-  }
-
-  if (key === 'participantNumbers') {
-    return (first.participantNumbers - second.participantNumbers) * dir
-  }
-
-  if (key === 'price') {
-    return (first.price - second.price) * dir
-  }
-
-  if (key === 'createdAt') {
-    return first.createdAt.localeCompare(second.createdAt) * dir
-  }
-
-  return 0
+/** 關閉活動列表彈窗 */
+function closeGatheringsDialog() {
+  isGatheringsDialogOpen.value = false
 }
 
-type GatheringTableControls = {
-  filters: Record<string, string>
-  searchKeyword: { value: string }
-  page: { value: number }
-  limit: { value: number }
-  setTotal: (value: number) => void
-  setPage: (value: number) => void
-  totalPages: { value: number }
-}
-
-/** 共用列表處理 */
-function useFilteredGatheringRows(
-  items: () => GatheringItem[],
-  tableControls: GatheringTableControls,
-  sortBy: { value: string },
-  sortOrder: { value: 'ASC' | 'DESC' },
-) {
-  const filteredSorted = computed(() => {
-    const keyword = tableControls.searchKeyword.value
-
-    return items()
-      .filter((item) => isMatchSelectedFilters(item, tableControls.filters))
-      .filter((item) => matchesGatheringSearch(item, keyword))
-      .sort((a, b) =>
-        compareGatheringsForSort(
-          a,
-          b,
-          sortBy.value as GatheringSortBy,
-          sortOrder.value,
-        ),
-      )
-  })
-
-  const rows = computed<Record<string, unknown>[]>(() => {
-    const page = tableControls.page.value
-    const limit = tableControls.limit.value
-    const start = (page - 1) * limit
-
-    return filteredSorted.value
-      .slice(start, start + limit)
-      .map((item): Record<string, unknown> => ({ ...item }))
-  })
-
-  watchEffect(() => {
-    const count = filteredSorted.value.length
-    tableControls.setTotal(count)
-    if (tableControls.page.value > tableControls.totalPages.value) {
-      tableControls.setPage(tableControls.totalPages.value)
-    }
-  })
-
-  return { rows, filteredSorted }
-}
-
-const { rows: createdGatheringRows } = useFilteredGatheringRows(
-  () => createdGatheringsQuery.data.value ?? [],
-  createdUi,
-  createdSortBy,
-  createdSortOrder,
+const gatheringDialogTitle = computed(() =>
+  activeGatheringsDialogType.value === 'created' ? '建立的活動' : '參加的活動',
 )
 
-const { rows: participatedGatheringRows } = useFilteredGatheringRows(
-  () => participatedGatheringsQuery.data.value ?? [],
-  participatedUi,
-  participatedSortBy,
-  participatedSortOrder,
+const gatheringDialogRows = computed<Record<string, unknown>[]>(() => {
+  const source =
+    activeGatheringsDialogType.value === 'created'
+      ? createdGatheringsQuery.data.value
+      : participatedGatheringsQuery.data.value
+  return (source ?? []).map((item) => ({ ...item }))
+})
+
+const isGatheringsDialogLoading = computed(() =>
+  activeGatheringsDialogType.value === 'created'
+    ? createdGatheringsQuery.isPending.value
+    : participatedGatheringsQuery.isPending.value,
 )
-
-/** 篩選選單（建立活動） */
-const filterControls = computed<TableFilterControl[]>(() => [
-  {
-    key: 'status',
-    label: listText.labels.status,
-    value: createdUi.filters.status,
-    options: GatheringsListText.STATUS_OPTIONS,
-  },
-  {
-    key: 'type',
-    label: listText.labels.type,
-    value: createdUi.filters.type,
-    options: GatheringsListText.TYPE_OPTIONS,
-  },
-  {
-    key: 'isArchived',
-    label: listText.labels.isArchived,
-    value: createdUi.filters.isArchived,
-    options: GatheringsListText.IS_ARCHIVED_OPTIONS,
-  },
-])
-
-/** 篩選選單（參加活動） */
-const participatedFilterControls = computed<TableFilterControl[]>(() => [
-  {
-    key: 'status',
-    label: listText.labels.status,
-    value: participatedUi.filters.status,
-    options: GatheringsListText.STATUS_OPTIONS,
-  },
-  {
-    key: 'type',
-    label: listText.labels.type,
-    value: participatedUi.filters.type,
-    options: GatheringsListText.TYPE_OPTIONS,
-  },
-  {
-    key: 'isArchived',
-    label: listText.labels.isArchived,
-    value: participatedUi.filters.isArchived,
-    options: GatheringsListText.IS_ARCHIVED_OPTIONS,
-  },
-])
-
-/** 建立活動查詢錯誤監聽 */
-WatchErrorTransition.watch(
-  () => createdGatheringsQuery.isError.value,
-  () => {
-    createdGatheringListStore.openErrorDialog()
-  },
-)
-
-/** 參加活動查詢錯誤監聽 */
-WatchErrorTransition.watch(
-  () => participatedGatheringsQuery.isError.value,
-  () => {
-    participatedGatheringListStore.openErrorDialog()
-  },
-)
-
-/** 建立活動錯誤彈窗 */
-function handleCreatedErrorDialogOpenChange(value: boolean) {
-  if (value) {
-    createdGatheringListStore.openErrorDialog()
-    return
-  }
-  createdGatheringListStore.closeErrorDialog()
-}
-
-/** 參加活動錯誤彈窗 */
-function handleParticipatedErrorDialogOpenChange(value: boolean) {
-  if (value) {
-    participatedGatheringListStore.openErrorDialog()
-    return
-  }
-  participatedGatheringListStore.closeErrorDialog()
-}
 
 const {
   editDialogFields,
@@ -536,6 +267,28 @@ const profileItems = computed(() => {
               <SingleInfoCard title="顯示名稱">
                 {{ DisplayText.getDisplayText(user.displayName) }}
               </SingleInfoCard>
+              <SingleInfoCard title="建立活動數">
+                <div class="space-y-3">
+                  <div>{{ createdGatheringsCount }}</div>
+                  <ActionButton
+                    label="查看建立活動"
+                    color="light"
+                    class="w-full"
+                    @click="openCreatedGatheringsDialog"
+                  />
+                </div>
+              </SingleInfoCard>
+              <SingleInfoCard title="參加活動數">
+                <div class="space-y-3">
+                  <div>{{ participatedGatheringsCount }}</div>
+                  <ActionButton
+                    label="查看參加活動"
+                    color="light"
+                    class="w-full"
+                    @click="openParticipatedGatheringsDialog"
+                  />
+                </div>
+              </SingleInfoCard>
             </section>
 
             <!-- 帳號資訊 -->
@@ -545,63 +298,6 @@ const profileItems = computed(() => {
               :items="profileItems"
             />
 
-            <!-- 建立活動列表 -->
-            <GatheringTableSection
-              title="此使用者建立的活動"
-              :search-value="createdUi.searchInput.value"
-              :search-label="listText.labels.search"
-              :search-placeholder="listText.placeholders.search"
-              :search-button-text="listText.actions.search"
-              :filters="filterControls"
-              :columns="gatheringTableColumns"
-              :rows="createdGatheringRows"
-              :is-loading="createdGatheringsQuery.isPending.value"
-              :loading-text="listText.states.loading"
-              :empty-text="listText.states.empty"
-              :sort-by="createdSortBy"
-              :sort-order="createdSortOrder"
-              :total="createdUi.total.value"
-              :page="createdUi.page.value"
-              :total-pages="createdUi.totalPages.value"
-              :pagination-text="listText.pagination"
-              :prev-button-text="listText.actions.prevPage"
-              :next-button-text="listText.actions.nextPage"
-              :detail-button-text="listText.actions.detail"
-              @update:search-value="createdUi.updateSearchInput"
-              @update:filter="onCreatedFilterUpdate"
-              @search="createdUi.onSearch"
-              @sort-change="(payload) => onCreatedSortChange(payload as never)"
-              @go-page="createdUi.setPage"
-            />
-
-            <!-- 參加活動列表 -->
-            <GatheringTableSection
-              title="此使用者參加的活動"
-              :search-value="participatedUi.searchInput.value"
-              :search-label="listText.labels.search"
-              :search-placeholder="listText.placeholders.search"
-              :search-button-text="listText.actions.search"
-              :filters="participatedFilterControls"
-              :columns="gatheringTableColumns"
-              :rows="participatedGatheringRows"
-              :is-loading="participatedGatheringsQuery.isPending.value"
-              :loading-text="listText.states.loading"
-              :empty-text="listText.states.empty"
-              :sort-by="participatedSortBy"
-              :sort-order="participatedSortOrder"
-              :total="participatedUi.total.value"
-              :page="participatedUi.page.value"
-              :total-pages="participatedUi.totalPages.value"
-              :pagination-text="listText.pagination"
-              :prev-button-text="listText.actions.prevPage"
-              :next-button-text="listText.actions.nextPage"
-              :detail-button-text="listText.actions.detail"
-              @update:search-value="participatedUi.updateSearchInput"
-              @update:filter="onParticipatedFilterUpdate"
-              @search="participatedUi.onSearch"
-              @sort-change="(payload) => onParticipatedSortChange(payload as never)"
-              @go-page="participatedUi.setPage"
-            />
           </div>
 
           <!-- 詳細錯誤 -->
@@ -610,28 +306,6 @@ const profileItems = computed(() => {
             variant="error"
             :title="UserErrorMessages.DETAIL_FETCH_FAILED_TITLE"
             :description="errorDialogMessage"
-          />
-
-          <!-- 建立活動列表錯誤 -->
-          <AlertDialog
-            :open="createdGatheringListStore.isErrorDialogOpen"
-            variant="error"
-            :title="GatheringErrorMessages.LIST_FETCH_FAILED_TITLE"
-            :description="
-              GatheringErrorMessages.toListFetchErrorMessage(createdGatheringsQuery.error.value)
-            "
-            @update:open="handleCreatedErrorDialogOpenChange"
-          />
-
-          <!-- 參加活動列表錯誤 -->
-          <AlertDialog
-            :open="participatedGatheringListStore.isErrorDialogOpen"
-            variant="error"
-            :title="GatheringErrorMessages.LIST_FETCH_FAILED_TITLE"
-            :description="
-              GatheringErrorMessages.toListFetchErrorMessage(participatedGatheringsQuery.error.value)
-            "
-            @update:open="handleParticipatedErrorDialogOpenChange"
           />
 
           <!-- 名稱更新失敗 -->
@@ -696,5 +370,66 @@ const profileItems = computed(() => {
       @validation-error="handleRoleDialogValidationError"
       @submit="submitRoleForm"
     />
+
+    <!-- 活動列表彈窗 -->
+    <section
+      v-if="isGatheringsDialogOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/60 px-4 py-4 sm:py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="user-gatherings-dialog-title"
+      @click.self="closeGatheringsDialog"
+    >
+      <article
+        class="mx-auto flex w-full max-w-3xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-background shadow-2xl ring-1 ring-slate-200/50 dark:border-blue-800/80 dark:ring-blue-800/40 sm:max-h-[calc(100dvh-3rem)]"
+        @click.stop
+      >
+        <header
+          class="shrink-0 border-b border-slate-200/80 bg-linear-to-r from-sky-50/95 via-white to-cyan-50/75 px-5 py-4 dark:border-blue-800/80 dark:from-slate-950 dark:via-blue-950/80 dark:to-slate-950 sm:px-6"
+        >
+          <h3
+            id="user-gatherings-dialog-title"
+            class="text-lg leading-tight font-semibold tracking-tight text-slate-900 dark:text-blue-50"
+          >
+            {{ gatheringDialogTitle }}
+          </h3>
+        </header>
+
+        <div
+          class="min-h-0 flex-1 overflow-y-auto bg-white/95 px-4 py-4 dark:bg-blue-950 dark:text-blue-50 sm:px-6"
+        >
+          <div class="overflow-hidden rounded-xl border border-cyan-200 shadow-sm">
+            <TableDataGrid
+              :columns="gatheringDialogColumns"
+              :rows="gatheringDialogRows"
+              :is-loading="isGatheringsDialogLoading"
+              loading-text="載入活動中…"
+              empty-text="目前沒有活動資料"
+            >
+              <template #row="{ row: gathering }">
+                <TableCell class="text-center tabular-nums">{{ gathering.id }}</TableCell>
+                <TableCell class="max-w-[280px] text-center">
+                  <span class="inline-block max-w-full truncate text-center" :title="String(gathering.title ?? '')">
+                    {{ DisplayText.getDisplayText(String(gathering.title ?? '-')) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-center">
+                  {{ TableDisplay.toMappedText(gathering.type, GatheringsListText.TYPE_TEXT_MAP) }}
+                </TableCell>
+                <TableCell class="text-center">
+                  <GatheringStatusBadge :status="String(gathering.status ?? '')" />
+                </TableCell>
+              </template>
+            </TableDataGrid>
+          </div>
+        </div>
+
+        <footer
+          class="shrink-0 flex justify-end gap-2 border-t border-slate-200/80 bg-background px-5 py-4 dark:border-blue-800/80 dark:bg-blue-950/70 sm:px-6"
+        >
+          <ActionButton label="關閉" type="button" @click="closeGatheringsDialog" />
+        </footer>
+      </article>
+    </section>
   </main>
 </template>

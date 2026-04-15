@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import type {
   EditDialogField,
   EditDialogFormValue,
@@ -102,6 +103,8 @@ watch(
   },
   { immediate: true },
 )
+
+useBodyScrollLock(() => props.open)
 
 /** 關閉對話框 */
 function closeDialog() {
@@ -238,7 +241,7 @@ function handleSubmit() {
   <!-- 全螢幕遮罩 + 置中容器 -->
   <section
     v-if="props.open"
-    class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50 px-4 py-4 backdrop-blur-[2px] sm:py-6"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/60 px-4 py-4 sm:py-6"
   >
     <!-- 文章容器 -->
     <article class="mx-auto my-0 w-full max-w-2xl">
@@ -356,7 +359,7 @@ function handleSubmit() {
 
         <!-- 按鈕區 -->
         <footer
-          class="flex justify-end gap-2 border-t border-slate-200/80 bg-background/95 px-5 py-4 backdrop-blur supports-backdrop-filter:bg-background/80 dark:border-blue-800/80 dark:bg-blue-950/70 sm:px-6"
+          class="flex justify-end gap-2 border-t border-slate-200/80 bg-background px-5 py-4 dark:border-blue-800/80 dark:bg-blue-950/70 sm:px-6"
         >
           <!-- 取消按鈕 -->
           <ActionButton label="取消" type="button" @click="closeDialog" />
