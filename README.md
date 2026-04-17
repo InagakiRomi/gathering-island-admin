@@ -94,33 +94,33 @@ super@test.com
 ## 介面展示
 
 ### 登入介面
-<img src="https://github.com/user-attachments/assets/c95aa27a-aef5-4167-b026-43344620848c" width="480" align="top"/>
-<img src="https://github.com/user-attachments/assets/d9ce84dc-19ae-4a1f-85ce-a11763a19dbd" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/c95aa27a-aef5-4167-b026-43344620848c" width="400" align="top"/>
+<img src="https://github.com/user-attachments/assets/d9ce84dc-19ae-4a1f-85ce-a11763a19dbd" width="400" hspace="10" align="top"/>
 
 ### 頁面選單&儀板表
-<img src="https://github.com/user-attachments/assets/90574a06-ef3d-4254-bce8-9e3551c43531" width="480" align="top"/>
-<img src="https://github.com/user-attachments/assets/6ac3546a-8087-4724-8f25-70d8a6636a64" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/90574a06-ef3d-4254-bce8-9e3551c43531" width="400" align="top"/>
+<img src="https://github.com/user-attachments/assets/6ac3546a-8087-4724-8f25-70d8a6636a64" width="400" hspace="10" align="top"/>
 
 ### 活動介面
-<img src="https://github.com/user-attachments/assets/6663278b-d3ef-4b69-b087-8bf5be1b9f2f" width="480" align="top"/>
-<img src="https://github.com/user-attachments/assets/07921730-1b9a-4508-8b48-6222ad74a383" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/6663278b-d3ef-4b69-b087-8bf5be1b9f2f" width="400" align="top"/>
+<img src="https://github.com/user-attachments/assets/07921730-1b9a-4508-8b48-6222ad74a383" width="400" hspace="10" align="top"/>
 <br><br>
-<img src="https://github.com/user-attachments/assets/2e025199-fbb8-4f13-8652-e641a76f18df" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/2e025199-fbb8-4f13-8652-e641a76f18df" width="400" align="top"/>
 
 ### 使用者介面
-<img src="https://github.com/user-attachments/assets/c88431d8-090f-4696-b624-e01dfe11abd9" width="480" align="top"/>
-<img src="https://github.com/user-attachments/assets/74df97c9-f4e3-4e24-a02c-43092ae73d07" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/c88431d8-090f-4696-b624-e01dfe11abd9" width="400" align="top"/>
+<img src="https://github.com/user-attachments/assets/74df97c9-f4e3-4e24-a02c-43092ae73d07" width="400" hspace="10" align="top"/>
 
 ### 標籤介面
-<img src="https://github.com/user-attachments/assets/07efd0d8-e53d-40a2-9c57-cbc4ab4c929d" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/07efd0d8-e53d-40a2-9c57-cbc4ab4c929d" width="400" align="top"/>
 
 ### 彈跳表單
-<img src="https://github.com/user-attachments/assets/d1c95182-27d8-4aff-b679-9a99dd471046" width="480" align="top"/>
-<img src="https://github.com/user-attachments/assets/1e82d44c-9aff-4030-9c16-03c57e7a0f72" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/d1c95182-27d8-4aff-b679-9a99dd471046" width="400" align="top"/>
+<img src="https://github.com/user-attachments/assets/1e82d44c-9aff-4030-9c16-03c57e7a0f72" width="400" hspace="10" align="top"/>
 
 ### 彈跳提示
-<img src="https://github.com/user-attachments/assets/3b19f98e-7f7f-41f2-86f0-a5b73153844a" width="480" align="top"/>
-<img src="https://github.com/user-attachments/assets/b397c702-1f01-4dff-976d-592a9aa9f547" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/3b19f98e-7f7f-41f2-86f0-a5b73153844a" width="400" align="top"/>
+<img src="https://github.com/user-attachments/assets/b397c702-1f01-4dff-976d-592a9aa9f547" width="400" hspace="10" align="top"/>
 <br><br>
-<img src="https://github.com/user-attachments/assets/9754d7e1-bf0a-41c3-bdf8-5378007ac9a9" width="480" align="top"/>
+<img src="https://github.com/user-attachments/assets/9754d7e1-bf0a-41c3-bdf8-5378007ac9a9" width="400" align="top"/>
 
