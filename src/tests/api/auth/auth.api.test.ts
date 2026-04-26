@@ -25,6 +25,32 @@ describe('AuthApi', () => {
     expect(result).toEqual(response)
   })
 
+  it('checkServerStatus 呼叫 GET /api', async () => {
+    const get = vi.spyOn(ApiClient.instance, 'get').mockResolvedValue({
+      data: '<html>swagger</html>',
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as never,
+    })
+
+    await AuthApi.checkServerStatus()
+    expect(get).toHaveBeenCalledWith('/api')
+  })
+
+  it('startBackendServer 呼叫 POST /auth/start-server', async () => {
+    const post = vi.spyOn(ApiClient.instance, 'post').mockResolvedValue({
+      data: { message: '後端伺服器啟動成功' },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as never,
+    })
+
+    await AuthApi.startBackendServer()
+    expect(post).toHaveBeenCalledWith('/auth/start-server')
+  })
+
   it('authRegister 呼叫 POST /auth/register', async () => {
     const registerResponse = {
       sub: 1,

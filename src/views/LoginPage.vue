@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Field, useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useRouter } from 'vue-router'
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import AuthPageButton from '@/components/auth/AuthPageButton.vue'
+import AlertDialog from '@/components/common/AlertDialog.vue'
+import ServerStatusBanner from '@/components/auth/ServerStatusBanner.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,15 +14,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ApiClientError } from '@/api/apiClient'
 import type { ErrorPayload } from '@/api/apiErrors'
-import { AuthErrorMessages, AuthRole, useAuthLoginMutation } from '@/api/auth'
+import { AuthApi, AuthErrorMessages, AuthRole, useAuthLoginMutation } from '@/api/auth'
 import type { AuthLoginResponse } from '@/api/auth'
 import { AuthLoginSchema } from '@/validation/schemas/authLoginSchema'
+
+type ServerStatus = 'checking' | 'online' | 'offline'
+type DialogVariant = 'error' | 'success' | 'confirm'
 
 /** 是否顯示明文密碼 */
 const showPassword = ref(false)
 
 /** API／伺服器層錯誤訊息（與欄位驗證分開） */
 const errorMessage = ref('')
+
+/** 後端伺服器狀態 */
+const serverStatus = ref<ServerStatus>('checking')
+
+/** 後端啟動提示彈窗狀態 */
+const serverNoticeOpen = ref(false)
+const serverNoticeVariant = ref<DialogVariant>('confirm')
+const serverNoticeTitle = ref('')
+const serverNoticeDescription = ref('')
 
 /** 登入 mutation */
 const authLoginMutation = useAuthLoginMutation()
@@ -30,6 +44,32 @@ const router = useRouter()
 
 /** 是否正在送出登入請求 */
 const isSubmitting = computed(() => authLoginMutation.isPending.value)
+
+/** 目前是否正在檢查伺服器狀態 */
+const isCheckingServer = computed(() => serverStatus.value === 'checking')
+
+/** 檢查後端服務是否可連線 */
+async function checkServerStatus() {
+  serverStatus.value = 'checking'
+
+  try {
+    await AuthApi.checkServerStatus()
+    serverStatus.value = 'online'
+  } catch {
+    serverStatus.value = 'offline'
+  }
+}
+
+/** 觸發後端啟動 API 並顯示提示文字 */
+async function startBackendServer() {
+  serverNoticeVariant.value = 'confirm'
+  serverNoticeTitle.value = '後端伺服器啟動中'
+  serverNoticeDescription.value = '請稍後，系統正在嘗試喚醒後端服務。'
+  serverNoticeOpen.value = true
+
+  await Promise.allSettled([AuthApi.startBackendServer()])
+  await checkServerStatus()
+}
 
 const { handleSubmit } = useForm({
   validationSchema: toTypedSchema(AuthLoginSchema.schema),
@@ -68,11 +108,15 @@ const onLoginSubmit = handleSubmit((values) => {
     },
   )
 })
+
+onMounted(() => {
+  void checkServerStatus()
+})
 </script>
 
 <template>
   <!-- 登入頁主容器 -->
-  <main class="relative flex min-h-dvh items-center justify-center overflow-y-auto p-6 py-8">
+  <main class="relative flex min-h-dvh items-start justify-center overflow-y-auto p-6 py-6">
     <!-- 背景圖 -->
     <div class="login-bg absolute inset-0 bg-no-repeat md:bg-position-[center_30%]" />
 
@@ -80,7 +124,15 @@ const onLoginSubmit = handleSubmit((values) => {
     <div class="absolute inset-0 bg-[oklch(0.2_0.02_240/0.38)]" />
 
     <!-- 內容區：Logo + 登入卡片，保留上下間距 -->
-    <div class="relative z-10 flex w-full min-h-0 flex-col items-center py-4">
+    <div class="relative z-10 flex w-full min-h-0 flex-col items-center">
+      <div class="mb-6 flex w-full justify-center lg:justify-end">
+        <ServerStatusBanner
+          :status="serverStatus"
+          :is-checking="isCheckingServer"
+          @start-server="startBackendServer"
+          @retry="checkServerStatus"
+        />
+      </div>
       <!-- Logo -->
       <div class="flex pb-4 sm:pb-6">
         <img src="/logo_title.svg" alt="聚會島logo" class="h-28 sm:h-32" />
@@ -158,4 +210,12 @@ const onLoginSubmit = handleSubmit((values) => {
       </Card>
     </div>
   </main>
+  <AlertDialog
+    :open="serverNoticeOpen"
+    :variant="serverNoticeVariant"
+    :title="serverNoticeTitle"
+    :description="serverNoticeDescription"
+    close-text="關閉"
+    @update:open="(value) => (serverNoticeOpen = value)"
+  />
 </template>
